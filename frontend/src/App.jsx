@@ -35,13 +35,45 @@ export function App() {
   );
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-  // Check backend connectivity on mount
+  // Check backend connectivity and load DB audit history on mount
   useEffect(() => {
-    const checkBackend = async () => {
+    const checkBackendAndLoadHistory = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/health`);
         if (res.ok) {
           setBackendStatus('connected');
+          
+          // Fetch persistent history from PostgreSQL / SQLite
+          try {
+            const histRes = await fetch(`${API_BASE}/api/history?limit=15`);
+            if (histRes.ok) {
+              const histData = await histRes.json();
+              if (Array.isArray(histData) && histData.length > 0) {
+                const formattedHistory = histData.map(item => ({
+                  title: item.entities?.company || item.verdict || "Audited Job",
+                  jobMessage: item.summary || "",
+                  url: item.entities?.domain || "",
+                  result: {
+                    trustScore: item.trust_score,
+                    riskLevel: item.risk_level,
+                    riskColor: item.risk_color,
+                    verdict: item.verdict,
+                    summary: item.summary,
+                    entities: item.entities,
+                    deductions: item.deductions,
+                    verifications: item.verifications,
+                    recommendations: item.recommendations,
+                    passportId: item.passport_id,
+                    timestamp: item.timestamp
+                  }
+                }));
+                // Merge with default scenarios
+                setHistory(prev => [...formattedHistory, ...prev]);
+              }
+            }
+          } catch (histErr) {
+            console.info("History fetch fallback:", histErr);
+          }
         } else {
           setBackendStatus('offline');
         }
@@ -49,7 +81,7 @@ export function App() {
         setBackendStatus('offline');
       }
     };
-    checkBackend();
+    checkBackendAndLoadHistory();
   }, []);
 
   // Scenario Selection Handler
@@ -199,14 +231,15 @@ export function App() {
     setIsLoading(true);
 
     try {
-      // Attempt backend API call
+      // Attempt backend API call with screenshot OCR data if attached
       const response = await fetch(`${API_BASE}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: jobMessage,
           url: jobUrl || null,
-          has_image: !!selectedImage
+          has_image: !!selectedImage,
+          image_base64: selectedImage?.preview || null
         })
       });
 
@@ -240,7 +273,7 @@ export function App() {
         setHistory(prev => [
           {
             title: formatted.entities.company || "Job Audit",
-            jobMessage,
+            jobMessage: jobMessage || "Audited screenshot / URL",
             url: jobUrl,
             result: formatted
           },
