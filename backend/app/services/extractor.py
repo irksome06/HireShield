@@ -1,6 +1,7 @@
 import re
 import os
 import json
+import urllib.parse
 import tldextract
 from typing import Optional
 from app.models.schemas import ExtractedEntities
@@ -105,6 +106,16 @@ def extract_entities_rule_based(message: str, url: Optional[str] = None) -> Extr
     if company == "Not detected" and domain != "None detected" and domain not in ["gmail.com", "yahoo.com", "outlook.com", "t.me"]:
         company = domain.split('.')[0].capitalize()
 
+    # Public LinkedIn search URLs
+    linkedin_company_url = None
+    if company and company != "Not detected":
+        linkedin_company_url = f"https://www.linkedin.com/search/results/companies/?keywords={urllib.parse.quote(company)}"
+
+    linkedin_recruiter_url = None
+    if recruiter and recruiter != "Not detected":
+        query = f"{recruiter} {company}" if company and company != "Not detected" else recruiter
+        linkedin_recruiter_url = f"https://www.linkedin.com/search/results/people/?keywords={urllib.parse.quote(query)}"
+
     return ExtractedEntities(
         company=company,
         recruiter=recruiter,
@@ -114,6 +125,8 @@ def extract_entities_rule_based(message: str, url: Optional[str] = None) -> Extr
         domain=domain,
         payment_amount=payment_amount,
         salary_claim=salary_claim,
+        linkedin_company_url=linkedin_company_url,
+        linkedin_recruiter_url=linkedin_recruiter_url,
         extraction_method="Deterministic Rule Engine"
     )
 
@@ -162,25 +175,37 @@ Job URL (if provided): {url or 'None'}
                 if res.status_code == 200:
                     data = res.json()
                     raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                    # Clean any markdown block wrapping if present
                     if raw_text.startswith("```"):
                         raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
                         raw_text = re.sub(r"\s*```$", "", raw_text)
                     parsed = json.loads(raw_text)
 
+                    company = parsed.get("company") or base_entities.company
+                    recruiter = parsed.get("recruiter") or base_entities.recruiter
+
+                    linkedin_company_url = None
+                    if company and company != "Not detected":
+                        linkedin_company_url = f"https://www.linkedin.com/search/results/companies/?keywords={urllib.parse.quote(company)}"
+
+                    linkedin_recruiter_url = None
+                    if recruiter and recruiter != "Not detected":
+                        query = f"{recruiter} {company}" if company and company != "Not detected" else recruiter
+                        linkedin_recruiter_url = f"https://www.linkedin.com/search/results/people/?keywords={urllib.parse.quote(query)}"
+
                     return ExtractedEntities(
-                        company=parsed.get("company") or base_entities.company,
-                        recruiter=parsed.get("recruiter") or base_entities.recruiter,
+                        company=company,
+                        recruiter=recruiter,
                         email=parsed.get("email") or base_entities.email,
                         phone=parsed.get("phone") or base_entities.phone,
                         job_title=parsed.get("job_title") or base_entities.job_title,
                         domain=parsed.get("domain") or base_entities.domain,
                         payment_amount=parsed.get("payment_amount") or base_entities.payment_amount,
                         salary_claim=parsed.get("salary_claim") or base_entities.salary_claim,
+                        linkedin_company_url=linkedin_company_url,
+                        linkedin_recruiter_url=linkedin_recruiter_url,
                         extraction_method="Gemini 1.5 Flash AI"
                     )
         except Exception as e:
-            # Fall back gracefully to base regex entities on any error
             print(f"Gemini LLM extraction fallback (rule engine active): {e}")
 
     return base_entities
