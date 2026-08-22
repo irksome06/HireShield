@@ -16,6 +16,9 @@ class ExtractedEntities(BaseModel):
     domain: str = "None detected"
     payment_amount: str = "None detected"
     salary_claim: str = "Not specified"
+    linkedin_company_url: Optional[str] = None
+    linkedin_recruiter_url: Optional[str] = None
+    extraction_method: str = "Deterministic Rule Engine"
 
 class DeductionItem(BaseModel):
     id: int
@@ -26,7 +29,7 @@ class DeductionItem(BaseModel):
 
 class VerificationItem(BaseModel):
     name: str
-    status: str  # Passed, Warning, Failed, Unverified, Neutral
+    status: str  # Passed, Warning, Failed, Unavailable, Neutral
     detail: str
 
 class AnalysisResponse(BaseModel):
