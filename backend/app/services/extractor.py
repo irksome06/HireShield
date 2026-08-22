@@ -161,7 +161,7 @@ Job Offer Text:
 \"\"\"{message}\"\"\"
 Job URL (if provided): {url or 'None'}
 """
-            url_endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key.strip()}"
+            url_endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={gemini_key.strip()}"
             payload = {
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {

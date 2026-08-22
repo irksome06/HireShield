@@ -3,11 +3,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+
+# Ensure backend/.env is loaded reliably regardless of working directory
+backend_env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+if os.path.exists(backend_env_path):
+    load_dotenv(dotenv_path=backend_env_path)
+load_dotenv()
+
 from app.api.endpoints import router as api_router
 from app.api.auth import router as auth_router
 from app.db.database import init_db
-
-load_dotenv()
 
 # Initialize DB
 try:
