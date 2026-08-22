@@ -9,13 +9,16 @@ import { VerificationChecksCard } from './components/VerificationChecksCard';
 import { EvidenceTrailCard } from './components/EvidenceTrailCard';
 import { SafetyRecommendationsCard } from './components/SafetyRecommendationsCard';
 import { JobTrustPassport } from './components/JobTrustPassport';
-import { HistoryDrawer } from './components/HistoryDrawer';
+import { HistoryTab } from './components/HistoryTab';
 import { MOCK_SCENARIOS } from './data/mockScenarios';
-import { ShieldCheck, FileSearch, Sparkles, RefreshCw } from 'lucide-react';
+import { FileSearch } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 export function App() {
+  // Navigation Tab State: 'scanner' | 'history'
+  const [activeTab, setActiveTab] = useState('scanner');
+
   // Active Input State
   const [jobMessage, setJobMessage] = useState(MOCK_SCENARIOS[0].message);
   const [jobUrl, setJobUrl] = useState(MOCK_SCENARIOS[0].url);
@@ -26,7 +29,7 @@ export function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [backendStatus, setBackendStatus] = useState('connecting'); // 'connected' | 'offline'
   
-  // History & Navigation State
+  // History State
   const [history, setHistory] = useState(
     MOCK_SCENARIOS.map(s => ({
       title: s.title,
@@ -35,7 +38,6 @@ export function App() {
       result: s.result
     }))
   );
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   // Check backend connectivity and load DB audit history on mount
   useEffect(() => {
@@ -46,7 +48,7 @@ export function App() {
           setBackendStatus('connected');
           
           try {
-            const histRes = await fetch(`${API_BASE}/api/history?limit=15`);
+            const histRes = await fetch(`${API_BASE}/api/history?limit=25`);
             if (histRes.ok) {
               const histData = await histRes.json();
               if (Array.isArray(histData) && histData.length > 0) {
@@ -90,11 +92,14 @@ export function App() {
     setJobUrl(scenario.url);
     setSelectedImage(null);
     setCurrentResult(scenario.result);
-    // Smooth scroll to results
-    const resultsElem = document.getElementById('results-view');
-    if (resultsElem) {
-      resultsElem.scrollIntoView({ behavior: 'smooth' });
-    }
+    setActiveTab('scanner');
+
+    setTimeout(() => {
+      const resultsElem = document.getElementById('results-view');
+      if (resultsElem) {
+        resultsElem.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   // Local Rule-Based Heuristic Fallback Engine
@@ -154,7 +159,6 @@ export function App() {
       });
     }
 
-    // Determine Risk Tier
     let riskLevel = "Low";
     let riskColor = "emerald";
     let verdict = "Verified & High-Trust Job Opportunity";
@@ -234,6 +238,7 @@ export function App() {
   // Execute Analysis (FastAPI Backend with local fallback)
   const handleAnalyze = async () => {
     setIsLoading(true);
+    setActiveTab('scanner');
 
     const startTime = Date.now();
 
@@ -249,7 +254,6 @@ export function App() {
         })
       });
 
-      // Ensure minimum animated scan duration (800ms) for smooth UX
       const elapsed = Date.now() - startTime;
       if (elapsed < 800) {
         await new Promise(r => setTimeout(r, 800 - elapsed));
@@ -321,98 +325,115 @@ export function App() {
     if (item.result) {
       setCurrentResult(item.result);
     }
+    setActiveTab('scanner');
+
+    setTimeout(() => {
+      const resultsElem = document.getElementById('results-view');
+      if (resultsElem) {
+        resultsElem.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   return (
     <div className="min-h-screen bg-[#0a0e17] text-slate-100 bg-grid-pattern relative pb-16">
       {/* Top Navigation */}
       <Navbar 
-        onOpenHistory={() => setIsHistoryOpen(true)}
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
         historyCount={history.length}
         backendStatus={backendStatus}
       />
 
       {/* Main Container */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 space-y-7 mt-2">
-        {/* Friendly Hero */}
-        <Hero />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 space-y-7 mt-3">
+        
+        {/* TAB 1: SCANNER VIEW */}
+        {activeTab === 'scanner' && (
+          <>
+            {/* Friendly Hero */}
+            <Hero />
 
-        {/* Input Console */}
-        <section id="analysis-form">
-          <AnalysisForm
-            jobMessage={jobMessage}
-            setJobMessage={setJobMessage}
-            jobUrl={jobUrl}
-            setJobUrl={setJobUrl}
-            selectedImage={selectedImage}
-            setSelectedImage={setSelectedImage}
-            onAnalyze={handleAnalyze}
-            isLoading={isLoading}
-            onSelectScenario={handleSelectScenario}
-          />
-        </section>
+            {/* Input Console */}
+            <section id="analysis-form">
+              <AnalysisForm
+                jobMessage={jobMessage}
+                setJobMessage={setJobMessage}
+                jobUrl={jobUrl}
+                setJobUrl={setJobUrl}
+                selectedImage={selectedImage}
+                setSelectedImage={setSelectedImage}
+                onAnalyze={handleAnalyze}
+                isLoading={isLoading}
+                onSelectScenario={handleSelectScenario}
+              />
+            </section>
 
-        {/* Animated Scanning State */}
-        {isLoading && <AnalyzingState />}
+            {/* Animated Scanning State */}
+            {isLoading && <AnalyzingState />}
 
-        {/* Simple, Plain-English Results Section */}
-        {currentResult && !isLoading && (
-          <section id="results-view" className="space-y-6 pt-3 animate-fadeIn">
-            
-            {/* Section Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <FileSearch className="w-5 h-5 text-cyan-400" />
-                <h2 className="text-xl font-bold text-slate-100 tracking-tight">
-                  Job Safety Assessment
-                </h2>
-              </div>
-              <span className="text-xs text-cyan-300 bg-cyan-950/70 px-3 py-1 rounded-full border border-cyan-800/50 font-mono">
-                Report #{currentResult.passportId}
-              </span>
-            </div>
+            {/* Simple, Plain-English Results Section */}
+            {currentResult && !isLoading && (
+              <section id="results-view" className="space-y-6 pt-3 animate-fadeIn">
+                
+                {/* Section Header */}
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <FileSearch className="w-5 h-5 text-cyan-400" />
+                    <h2 className="text-xl font-bold text-slate-100 tracking-tight">
+                      Job Safety Assessment
+                    </h2>
+                  </div>
+                  <span className="text-xs text-cyan-300 bg-cyan-950/70 px-3 py-1 rounded-full border border-cyan-800/50 font-mono">
+                    Report #{currentResult.passportId}
+                  </span>
+                </div>
 
-            {/* 1. Risk / Safety Score Gauge */}
-            <TrustScoreGauge
-              score={currentResult.trustScore}
-              riskLevel={currentResult.riskLevel}
-              verdict={currentResult.verdict}
-              summary={currentResult.summary}
-            />
+                {/* 1. Risk / Safety Score Gauge */}
+                <TrustScoreGauge
+                  score={currentResult.trustScore}
+                  riskLevel={currentResult.riskLevel}
+                  verdict={currentResult.verdict}
+                  summary={currentResult.summary}
+                />
 
-            {/* 2. What We Found */}
-            <WhatWeFoundCard entities={currentResult.entities} />
+                {/* 2. What We Found */}
+                <WhatWeFoundCard entities={currentResult.entities} />
 
-            {/* 3. Three Core Verification Checks */}
-            <VerificationChecksCard 
-              verifications={currentResult.verifications}
-              entities={currentResult.entities}
-            />
+                {/* 3. Three Core Verification Checks */}
+                <VerificationChecksCard 
+                  verifications={currentResult.verifications}
+                  entities={currentResult.entities}
+                />
 
-            {/* 4. Warning Signs & Red Flags */}
-            <EvidenceTrailCard deductions={currentResult.deductions} />
+                {/* 4. Warning Signs & Red Flags */}
+                <EvidenceTrailCard deductions={currentResult.deductions} />
 
-            {/* 5. What You Should Do Next */}
-            <SafetyRecommendationsCard 
-              recommendations={currentResult.recommendations}
-              riskLevel={currentResult.riskLevel}
-            />
+                {/* 5. What You Should Do Next */}
+                <SafetyRecommendationsCard 
+                  recommendations={currentResult.recommendations}
+                  riskLevel={currentResult.riskLevel}
+                />
 
-            {/* 6. Official Job Safety Certificate */}
-            <JobTrustPassport passportData={currentResult} />
+                {/* 6. Official Job Safety Certificate */}
+                <JobTrustPassport passportData={currentResult} />
 
-          </section>
+              </section>
+            )}
+          </>
         )}
-      </main>
 
-      {/* Slide-over Saved Scans Drawer */}
-      <HistoryDrawer
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        history={history}
-        onSelectHistoryItem={handleSelectHistoryItem}
-        onClearHistory={() => setHistory([])}
-      />
+        {/* TAB 2: DEDICATED HISTORY VIEW */}
+        {activeTab === 'history' && (
+          <HistoryTab
+            history={history}
+            onSelectHistoryItem={handleSelectHistoryItem}
+            onClearHistory={() => setHistory([])}
+            onSwitchToScanner={() => setActiveTab('scanner')}
+          />
+        )}
+
+      </main>
 
       {/* Footer */}
       <footer className="mt-16 border-t border-slate-900 pt-8 text-center text-xs text-slate-500 font-mono print:hidden">
