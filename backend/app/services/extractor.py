@@ -1,5 +1,6 @@
 import re
 import os
+import json
 import tldextract
 from typing import Optional
 from app.models.schemas import ExtractedEntities
@@ -13,7 +14,7 @@ def extract_domain_from_url_or_text(url: Optional[str], text: str) -> str:
                 cleaned = 'https://' + cleaned
             ext = tldextract.extract(cleaned)
             if ext.domain and ext.suffix:
-                return f"{ext.domain}.{ext.suffix}"
+                return f"{ext.domain}.{ext.suffix}".lower()
         except Exception:
             pass
 
@@ -26,7 +27,7 @@ def extract_domain_from_url_or_text(url: Optional[str], text: str) -> str:
 
 def extract_entities_rule_based(message: str, url: Optional[str] = None) -> ExtractedEntities:
     """Deterministic, resilient rule-based entity extraction using regex patterns."""
-    text = message.strip()
+    text = (message or "").strip()
 
     # 1. Email extraction
     email_match = re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', text)
@@ -67,7 +68,7 @@ def extract_entities_rule_based(message: str, url: Optional[str] = None) -> Extr
         match = re.search(pat, text, re.IGNORECASE)
         if match:
             candidate = match.group(1).strip()
-            if len(candidate) > 3 and len(candidate) < 60:
+            if 3 < len(candidate) < 60:
                 job_title = candidate
                 break
 
@@ -112,44 +113,74 @@ def extract_entities_rule_based(message: str, url: Optional[str] = None) -> Extr
         job_title=job_title,
         domain=domain,
         payment_amount=payment_amount,
-        salary_claim=salary_claim
+        salary_claim=salary_claim,
+        extraction_method="Deterministic Rule Engine"
     )
 
 async def extract_entities(message: str, url: Optional[str] = None) -> ExtractedEntities:
     """
     Main extraction interface.
-    Extracts structured entities using regex heuristics and enhances with LLM if GEMINI_API_KEY / OPENAI_API_KEY is configured.
+    Extracts structured entities using Gemini LLM if GEMINI_API_KEY is configured,
+    or falls back cleanly to deterministic regex heuristics.
     """
-    # Rule based first
     base_entities = extract_entities_rule_based(message, url)
 
-    # Optional LLM Enhancement (if configured)
     gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key:
+    if gemini_key and gemini_key.strip():
         try:
             import httpx
-            async with httpx.AsyncClient(timeout=4.0) as client:
-                prompt = f"""
-                Extract the following structured JSON entities from this job offer text:
-                - company (string or "Not detected")
-                - recruiter (string or "Not detected")
-                - email (string or "Not provided")
-                - phone (string or "Not provided")
-                - job_title (string or "Not specified")
-                - domain (string or "None detected")
-                - payment_amount (string or "None detected")
-                - salary_claim (string or "Not specified")
+            prompt = f"""
+You are a cybersecurity and recruitment intelligence assistant.
+Extract structured entities from the following job communication or offer text.
+Return ONLY valid JSON matching this exact structure:
+{{
+  "company": "Company name or 'Not detected'",
+  "recruiter": "Recruiter full name or 'Not detected'",
+  "email": "Official contact email or 'Not provided'",
+  "phone": "Phone/WhatsApp number or 'Not provided'",
+  "job_title": "Position/Job title or 'Not specified'",
+  "domain": "Company or job website domain (e.g. company.com) or 'None detected'",
+  "payment_amount": "Explicit upfront fee/equipment payment demanded or 'None detected'",
+  "salary_claim": "Stated salary or compensation or 'Not specified'"
+}}
 
-                Text:
-                {message}
-                """
-                url_endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
-                res = await client.post(url_endpoint, json={"contents": [{"parts": [{"text": prompt}]}]})
+Job Offer Text:
+\"\"\"{message}\"\"\"
+Job URL (if provided): {url or 'None'}
+"""
+            url_endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key.strip()}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.1,
+                    "responseMimeType": "application/json"
+                }
+            }
+
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                res = await client.post(url_endpoint, json=payload)
                 if res.status_code == 200:
-                    # Parse structured response if valid
-                    pass
-        except Exception:
-            # Always fallback silently to deterministic extraction
-            pass
+                    data = res.json()
+                    raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    # Clean any markdown block wrapping if present
+                    if raw_text.startswith("```"):
+                        raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
+                        raw_text = re.sub(r"\s*```$", "", raw_text)
+                    parsed = json.loads(raw_text)
+
+                    return ExtractedEntities(
+                        company=parsed.get("company") or base_entities.company,
+                        recruiter=parsed.get("recruiter") or base_entities.recruiter,
+                        email=parsed.get("email") or base_entities.email,
+                        phone=parsed.get("phone") or base_entities.phone,
+                        job_title=parsed.get("job_title") or base_entities.job_title,
+                        domain=parsed.get("domain") or base_entities.domain,
+                        payment_amount=parsed.get("payment_amount") or base_entities.payment_amount,
+                        salary_claim=parsed.get("salary_claim") or base_entities.salary_claim,
+                        extraction_method="Gemini 1.5 Flash AI"
+                    )
+        except Exception as e:
+            # Fall back gracefully to base regex entities on any error
+            print(f"Gemini LLM extraction fallback (rule engine active): {e}")
 
     return base_entities

@@ -1,3 +1,4 @@
+import re
 import uuid
 from datetime import datetime
 from typing import List, Tuple
@@ -25,8 +26,11 @@ def evaluate_job_risk(
     deduction_id = 1
 
     # 1. UPFRONT PAYMENT / EQUIPMENT FEE (Severe critical signal: -40)
-    payment_terms = ['fee', 'wire', 'zelle', 'deposit', 'pay upfront', 'purchase equipment', '$350', 'reimbursed on your first paycheck', 'cashapp', 'gift card']
-    if any(term in text_lower for term in payment_terms) or (entities.payment_amount != "None detected" and not "none" in entities.payment_amount.lower()):
+    payment_regex = r'\b(?:advance fee|application fee|equipment fee|processing fee|registration fee|training fee|onboarding fee|pay upfront|purchase equipment|zelle|cashapp|venmo|usdt|gift card|wire transfer|crypto wallet|bitcoin)\b|\bfee\b(?!\s*back|\s*dback)'
+    has_payment_phrase = bool(re.search(payment_regex, text_lower)) or any(p in text_lower for p in ['reimbursed on your first paycheck', 'purchase home office', 'send $', 'pay $', 'security deposit'])
+    has_extracted_fee = entities.payment_amount != "None detected" and not "none" in entities.payment_amount.lower()
+
+    if has_payment_phrase or has_extracted_fee:
         penalty = -40
         score += penalty
         deductions.append(DeductionItem(
@@ -39,8 +43,8 @@ def evaluate_job_risk(
         deduction_id += 1
 
     # 2. SENSITIVE IDENTIFIERS / OTP / DATA HARVESTING (High risk: -25)
-    data_harvesting_terms = ['ssn', 'social security', 'otp', 'one-time password', 'bank account details', 'routing number', 'passport copy', 'driver license']
-    if any(term in text_lower for term in data_harvesting_terms):
+    data_regex = r'\b(?:ssn|social security|otp|one-time password|routing number)\b'
+    if re.search(data_regex, text_lower) or any(term in text_lower for term in ['bank account details', 'passport copy', 'driver license']):
         penalty = -25
         score += penalty
         deductions.append(DeductionItem(
@@ -53,8 +57,8 @@ def evaluate_job_risk(
         deduction_id += 1
 
     # 3. OFF-PLATFORM REDIRECTION (Telegram, WhatsApp, Signal) (High risk: -20)
-    off_platform_terms = ['telegram', 't.me', 'whatsapp', 'wa.me', 'signal', 'direct message on telegram', '@talentpeak']
-    if any(term in text_lower for term in off_platform_terms) or 't.me' in url_lower:
+    off_platform_regex = r'\b(?:telegram|t\.me|whatsapp|wa\.me|signal)\b'
+    if re.search(off_platform_regex, text_lower) or 't.me' in url_lower or 'wa.me' in url_lower:
         penalty = -20
         score += penalty
         deductions.append(DeductionItem(

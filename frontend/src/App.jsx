@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar } from './components/Navbar';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { PreferencesProvider } from './context/PreferencesContext';
+import ScrollLandingPage from './components/Landing/ScrollLandingPage';
+import DashboardSidebar from './components/Sidebar/DashboardSidebar';
+import HomeView from './components/Dashboard/HomeView';
+import VerifiedCompaniesView from './components/Dashboard/VerifiedCompaniesView';
+import SafetyInsightsView from './components/Dashboard/SafetyInsightsView';
+import WatchlistView from './components/Dashboard/WatchlistView';
+import ProfileView from './components/Dashboard/ProfileView';
+import SettingsView from './components/Dashboard/SettingsView';
+
 import { Hero } from './components/Hero';
 import { AnalysisForm } from './components/AnalysisForm';
 import { AnalyzingState } from './components/AnalyzingState';
@@ -10,50 +20,52 @@ import { EvidenceTrailCard } from './components/EvidenceTrailCard';
 import { SafetyRecommendationsCard } from './components/SafetyRecommendationsCard';
 import { JobTrustPassport } from './components/JobTrustPassport';
 import { HistoryTab } from './components/HistoryTab';
-import { MOCK_SCENARIOS } from './data/mockScenarios';
-import { FileSearch } from 'lucide-react';
+import { FileSearch, Shield, Bell, CheckCircle2 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-export function App() {
-  // Navigation Tab State: 'scanner' | 'history'
-  const [activeTab, setActiveTab] = useState('scanner');
+function Dashboard() {
+  const { user, token } = useAuth();
 
-  // Active Input State
-  const [jobMessage, setJobMessage] = useState(MOCK_SCENARIOS[0].message);
-  const [jobUrl, setJobUrl] = useState(MOCK_SCENARIOS[0].url);
+  // Navigation Tab State: 'home' | 'scanner' | 'companies' | 'insights' | 'history' | 'watchlist' | 'profile' | 'settings'
+  const [activeTab, setActiveTab] = useState('home');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Active Input State for Scanner
+  const [jobMessage, setJobMessage] = useState('');
+  const [jobUrl, setJobUrl] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   
   // Analysis Result State
-  const [currentResult, setCurrentResult] = useState(MOCK_SCENARIOS[0].result);
+  const [currentResult, setCurrentResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState(null);
   const [backendStatus, setBackendStatus] = useState('connecting'); // 'connected' | 'offline'
   
-  // History State
-  const [history, setHistory] = useState(
-    MOCK_SCENARIOS.map(s => ({
-      title: s.title,
-      jobMessage: s.message,
-      url: s.url,
-      result: s.result
-    }))
-  );
+  // Audit History State
+  const [history, setHistory] = useState([]);
 
-  // Check backend connectivity and load DB audit history on mount
+  // Check backend connectivity and load persisted DB audit history on mount
   useEffect(() => {
     const checkBackendAndLoadHistory = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/health`);
         if (res.ok) {
           setBackendStatus('connected');
+          setApiError(null);
           
           try {
-            const histRes = await fetch(`${API_BASE}/api/history?limit=25`);
+            const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
+            const histRes = await fetch(`${API_BASE}/api/history?limit=50`, {
+              headers: authHeaders
+            });
             if (histRes.ok) {
               const histData = await histRes.json();
-              if (Array.isArray(histData) && histData.length > 0) {
+              if (Array.isArray(histData)) {
                 const formattedHistory = histData.map(item => ({
-                  title: item.entities?.company || item.verdict || "Scanned Job",
+                  title: item.entities?.company && item.entities.company !== 'Not detected' 
+                    ? item.entities.company 
+                    : item.verdict || "Scanned Job",
                   jobMessage: item.summary || "",
                   url: item.entities?.domain || "",
                   result: {
@@ -70,11 +82,11 @@ export function App() {
                     timestamp: item.timestamp
                   }
                 }));
-                setHistory(prev => [...formattedHistory, ...prev]);
+                setHistory(formattedHistory);
               }
             }
           } catch (histErr) {
-            console.info("History fetch fallback:", histErr);
+            console.warn("History fetch warning:", histErr);
           }
         } else {
           setBackendStatus('offline');
@@ -83,180 +95,42 @@ export function App() {
         setBackendStatus('offline');
       }
     };
+
     checkBackendAndLoadHistory();
-  }, []);
+  }, [token]);
 
-  // Scenario Selection Handler
-  const handleSelectScenario = (scenario) => {
-    setJobMessage(scenario.message);
-    setJobUrl(scenario.url);
-    setSelectedImage(null);
-    setCurrentResult(scenario.result);
-    setActiveTab('scanner');
-
-    setTimeout(() => {
-      const resultsElem = document.getElementById('results-view');
-      if (resultsElem) {
-        resultsElem.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100);
-  };
-
-  // Local Rule-Based Heuristic Fallback Engine
-  const runLocalRuleEngine = (text, url) => {
-    const lowerText = (text || '').toLowerCase();
-    const lowerUrl = (url || '').toLowerCase();
-    
-    let score = 100;
-    const deductions = [];
-    const verifications = [];
-
-    // Upfront fee check
-    if (lowerText.includes('fee') || lowerText.includes('zelle') || lowerText.includes('wire') || lowerText.includes('pay upfront') || lowerText.includes('$350') || lowerText.includes('purchase equipment')) {
-      score -= 40;
-      deductions.push({
-        id: 1,
-        signal: "Upfront Money / Equipment Fee Demanded",
-        penalty: -40,
-        severity: "Critical",
-        description: "Demands advance payment (Zelle, Wire, Gift card) for home-office hardware. Real employers NEVER charge candidates for equipment."
-      });
-    }
-
-    // Urgency & personal data harvesting
-    if (lowerText.includes('ssn') || lowerText.includes('social security') || lowerText.includes('whatsapp') || lowerText.includes('otp') || lowerText.includes('immediately')) {
-      score -= 20;
-      deductions.push({
-        id: 2,
-        signal: "Urgent SSN / Banking Data Request",
-        penalty: -20,
-        severity: "High",
-        description: "Asks for confidential identity numbers (SSN/OTP/banking) before formal contracts or legitimate onboarding."
-      });
-    }
-
-    // Telegram / Crypto check
-    if (lowerText.includes('telegram') || lowerText.includes('crypto') || lowerText.includes('usdt') || lowerUrl.includes('t.me')) {
-      score -= 25;
-      deductions.push({
-        id: 3,
-        signal: "Off-Platform Chat / Crypto Task Trap",
-        penalty: -25,
-        severity: "High",
-        description: "Directs communication to unmonitored Telegram/WhatsApp handles or crypto task platforms."
-      });
-    }
-
-    // Suspicious domain extension
-    if (lowerUrl.includes('.top') || lowerUrl.includes('.xyz') || lowerUrl.includes('.click') || lowerText.includes('.top')) {
-      score -= 25;
-      deductions.push({
-        id: 4,
-        signal: "Suspicious / Fake Website Domain",
-        penalty: -25,
-        severity: "High",
-        description: "Uses a temporary or high-abuse website extension frequently registered for phishing."
-      });
-    }
-
-    let riskLevel = "Low";
-    let riskColor = "emerald";
-    let verdict = "Verified & High-Trust Job Opportunity";
-
-    if (score < 35) {
-      riskLevel = "High";
-      riskColor = "rose";
-      verdict = "High Risk — Likely a Recruitment Scam";
-    } else if (score < 60) {
-      riskLevel = "Suspicious";
-      riskColor = "amber";
-      verdict = "Suspicious — Proceed with Extreme Caution";
-    } else if (score < 80) {
-      riskLevel = "Moderate";
-      riskColor = "sky";
-      verdict = "Moderate Risk — Verify Company Directly";
-    }
-
-    const extractedEmail = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/)?.[0] || "Not provided";
-    const extractedPhone = text.match(/(\+?\d{1,3}[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/)?.[0] || "Not provided";
-    
-    let domainName = "None detected";
-    if (url) {
-      try {
-        const u = new URL(url.startsWith('http') ? url : `https://${url}`);
-        domainName = u.hostname;
-      } catch (e) {
-        domainName = url;
-      }
-    }
-
-    verifications.push({
-      name: "Website Link Check",
-      status: score > 70 ? "Passed" : score > 40 ? "Warning" : "Failed",
-      detail: domainName !== "None detected" ? `Scanned website: ${domainName}` : "No link provided"
-    });
-
-    verifications.push({
-      name: "Recruiter Email Check",
-      status: extractedEmail.includes('@') && !extractedEmail.includes('gmail') ? "Passed" : "Warning",
-      detail: extractedEmail !== "Not provided" ? `Sender: ${extractedEmail}` : "No official email provided"
-    });
-
-    return {
-      trustScore: Math.max(0, score),
-      riskLevel,
-      riskColor,
-      verdict,
-      summary: deductions.length > 0
-        ? `Identified ${deductions.length} major red flags resulting in a Safety Score of ${score}/100.`
-        : "No scam triggers, upfront fee requests, or fake links were found in this job offer.",
-      entities: {
-        company: text.includes('Apex') ? 'Apex Global Logistics' : text.includes('CloudScale') ? 'CloudScale Systems' : 'Extracted Company',
-        recruiter: text.includes('Sarah') ? 'Sarah Jenkins' : text.includes('Michael') ? 'Michael Sterling' : 'Unspecified Recruiter',
-        email: extractedEmail,
-        phone: extractedPhone,
-        jobTitle: text.includes('Data Entry') ? 'Remote Data Entry' : text.includes('Frontend') ? 'Senior Frontend Engineer' : 'Offered Position',
-        domain: domainName,
-        paymentAmount: deductions.some(d => d.id === 1) ? '$350.00 Advance Fee' : 'None detected',
-        salaryClaim: text.match(/\$\d+(\/hr|\/hour|\/day|\/year|,\d+)/i)?.[0] || 'Market Standard'
-      },
-      deductions,
-      verifications,
-      recommendations: score < 50 ? [
-        "DO NOT send any money, wire transfers, or gift cards under any circumstances.",
-        "Refuse to transfer onboarding conversations to unverified private chat apps.",
-        "Verify the job requisition number directly on the official company career portal."
-      ] : [
-        "Confirm that interview invites arrive from the verified company domain.",
-        "Never submit sensitive banking info until contracts are formally counter-signed."
-      ],
-      passportId: `HSP-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}-${riskLevel[0]}`,
-      timestamp: new Date().toISOString()
-    };
-  };
-
-  // Execute Analysis (FastAPI Backend with local fallback)
+  // Execute Real Live Threat Analysis
   const handleAnalyze = async () => {
+    if (!jobMessage.trim() && !jobUrl.trim() && !selectedImage) {
+      return;
+    }
+
     setIsLoading(true);
+    setApiError(null);
     setActiveTab('scanner');
 
     const startTime = Date.now();
 
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${API_BASE}/api/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
-          message: jobMessage,
-          url: jobUrl || null,
+          message: jobMessage.trim(),
+          url: jobUrl.trim() || null,
           has_image: !!selectedImage,
           image_base64: selectedImage?.preview || null
         })
       });
 
       const elapsed = Date.now() - startTime;
-      if (elapsed < 800) {
-        await new Promise(r => setTimeout(r, 800 - elapsed));
+      if (elapsed < 600) {
+        await new Promise(r => setTimeout(r, 600 - elapsed));
       }
 
       if (response.ok) {
@@ -288,34 +162,33 @@ export function App() {
         setBackendStatus('connected');
         setHistory(prev => [
           {
-            title: formatted.entities.company || "Scanned Job",
+            title: formatted.entities.company !== 'Not detected' ? formatted.entities.company : "Scanned Job",
             jobMessage: jobMessage || "Audited screenshot / URL",
             url: jobUrl,
             result: formatted
           },
-          ...prev
+          ...prev.filter(h => h.result?.passportId !== formatted.passportId)
         ]);
+
         setIsLoading(false);
+
+        setTimeout(() => {
+          const resultsElem = document.getElementById('results-view');
+          if (resultsElem) {
+            resultsElem.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
         return;
+      } else {
+        const errJson = await response.json().catch(() => ({}));
+        setApiError(errJson.detail || `Analysis failed with status code ${response.status}.`);
       }
     } catch (e) {
-      console.warn("Backend API not reachable; using local rule engine fallback.", e);
+      console.error("Backend API connection error:", e);
       setBackendStatus('offline');
+      setApiError("Cannot reach HireShield API backend at " + API_BASE + ". Please verify that the FastAPI backend server is running.");
     }
 
-    // Fallback to local engine
-    await new Promise(r => setTimeout(r, 600));
-    const res = runLocalRuleEngine(jobMessage, jobUrl);
-    setCurrentResult(res);
-    setHistory(prev => [
-      {
-        title: res.entities.company || "Scanned Job",
-        jobMessage: jobMessage || "Audited offer",
-        url: jobUrl,
-        result: res
-      },
-      ...prev
-    ]);
     setIsLoading(false);
   };
 
@@ -335,112 +208,224 @@ export function App() {
     }, 100);
   };
 
+  const handleClearHistory = async () => {
+    try {
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      await fetch(`${API_BASE}/api/history`, { method: 'DELETE', headers });
+    } catch (e) {
+      console.warn("Could not delete remote history:", e);
+    }
+    setHistory([]);
+  };
+
+  const getSectionTitle = () => {
+    switch (activeTab) {
+      case 'home': return 'Home Overview';
+      case 'scanner': return 'Check a Job';
+      case 'companies': return 'Verified Companies';
+      case 'insights': return 'Safety Insights';
+      case 'history': return 'Audit History';
+      case 'watchlist': return 'Saved / Watchlist';
+      case 'profile': return 'My Profile';
+      case 'settings': return 'Settings';
+      default: return 'HireShield';
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#0a0e17] text-slate-100 bg-grid-pattern relative pb-16">
-      {/* Top Navigation */}
-      <Navbar 
+    <div className="min-h-screen bg-[#07090e] text-slate-100 bg-grid-pattern relative flex selection:bg-cyan-500/30 selection:text-cyan-200">
+      
+      {/* PART 2: Fixed Collapsible Left Sidebar */}
+      <DashboardSidebar 
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        historyCount={history.length}
-        backendStatus={backendStatus}
+        setActiveTab={setActiveTab}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
       />
 
-      {/* Main Container */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 space-y-7 mt-3">
+      {/* Main Content Area (Offset by sidebar width) */}
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+        isSidebarCollapsed ? 'pl-20' : 'pl-64'
+      }`}>
         
-        {/* TAB 1: SCANNER VIEW */}
-        {activeTab === 'scanner' && (
-          <>
-            {/* Friendly Hero */}
-            <Hero />
+        {/* Top Floating App Bar */}
+        <header className="sticky top-0 z-30 px-6 py-4 bg-[#07090e]/80 backdrop-blur-xl border-b border-slate-800/80 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className="text-base font-bold text-white tracking-tight">{getSectionTitle()}</h2>
+          </div>
 
-            {/* Input Console */}
-            <section id="analysis-form">
-              <AnalysisForm
-                jobMessage={jobMessage}
-                setJobMessage={setJobMessage}
-                jobUrl={jobUrl}
-                setJobUrl={setJobUrl}
-                selectedImage={selectedImage}
-                setSelectedImage={setSelectedImage}
-                onAnalyze={handleAnalyze}
-                isLoading={isLoading}
-                onSelectScenario={handleSelectScenario}
-              />
-            </section>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-xs text-slate-400 font-mono">
+              <span className={`w-2 h-2 rounded-full ${backendStatus === 'connected' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
+              <span>{backendStatus === 'connected' ? 'FastAPI 2.0 Online' : 'Backend Offline'}</span>
+            </div>
 
-            {/* Animated Scanning State */}
-            {isLoading && <AnalyzingState />}
+            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-cyan-400">
+              {user?.name?.[0]?.toUpperCase() || 'U'}
+            </div>
+          </div>
+        </header>
 
-            {/* Simple, Plain-English Results Section */}
-            {currentResult && !isLoading && (
-              <section id="results-view" className="space-y-6 pt-3 animate-fadeIn">
-                
-                {/* Section Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <FileSearch className="w-5 h-5 text-cyan-400" />
-                    <h2 className="text-xl font-bold text-slate-100 tracking-tight">
-                      Job Safety Assessment
-                    </h2>
-                  </div>
-                  <span className="text-xs text-cyan-300 bg-cyan-950/70 px-3 py-1 rounded-full border border-cyan-800/50 font-mono">
-                    Report #{currentResult.passportId}
-                  </span>
-                </div>
+        {/* View Router Container */}
+        <main className="flex-1 max-w-6xl w-full mx-auto p-6 sm:p-8 space-y-8">
+          
+          {/* VIEW 1: HOME (Default View) */}
+          {activeTab === 'home' && (
+            <HomeView 
+              onOpenScanner={() => setActiveTab('scanner')}
+              onViewHistory={() => setActiveTab('history')}
+            />
+          )}
 
-                {/* 1. Risk / Safety Score Gauge */}
-                <TrustScoreGauge
-                  score={currentResult.trustScore}
-                  riskLevel={currentResult.riskLevel}
-                  verdict={currentResult.verdict}
-                  summary={currentResult.summary}
+          {/* VIEW 2: CHECK A JOB (Full Scanner Console) */}
+          {activeTab === 'scanner' && (
+            <div className="space-y-7 animate-in fade-in duration-300">
+              <Hero />
+
+              <section id="analysis-form">
+                <AnalysisForm
+                  jobMessage={jobMessage}
+                  setJobMessage={setJobMessage}
+                  jobUrl={jobUrl}
+                  setJobUrl={setJobUrl}
+                  selectedImage={selectedImage}
+                  setSelectedImage={setSelectedImage}
+                  onAnalyze={handleAnalyze}
+                  isLoading={isLoading}
+                  apiError={apiError}
                 />
-
-                {/* 2. What We Found */}
-                <WhatWeFoundCard entities={currentResult.entities} />
-
-                {/* 3. Three Core Verification Checks */}
-                <VerificationChecksCard 
-                  verifications={currentResult.verifications}
-                  entities={currentResult.entities}
-                />
-
-                {/* 4. Warning Signs & Red Flags */}
-                <EvidenceTrailCard deductions={currentResult.deductions} />
-
-                {/* 5. What You Should Do Next */}
-                <SafetyRecommendationsCard 
-                  recommendations={currentResult.recommendations}
-                  riskLevel={currentResult.riskLevel}
-                />
-
-                {/* 6. Official Job Safety Certificate */}
-                <JobTrustPassport passportData={currentResult} />
-
               </section>
-            )}
-          </>
-        )}
 
-        {/* TAB 2: DEDICATED HISTORY VIEW */}
-        {activeTab === 'history' && (
-          <HistoryTab
-            history={history}
-            onSelectHistoryItem={handleSelectHistoryItem}
-            onClearHistory={() => setHistory([])}
-            onSwitchToScanner={() => setActiveTab('scanner')}
-          />
-        )}
+              {isLoading && <AnalyzingState />}
 
-      </main>
+              {currentResult && !isLoading && (
+                <section id="results-view" className="space-y-6 pt-3 animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <FileSearch className="w-5 h-5 text-cyan-400" />
+                      <h2 className="text-xl font-bold text-slate-100 tracking-tight">
+                        Job Safety Assessment
+                      </h2>
+                    </div>
+                    <span className="text-xs text-cyan-300 bg-cyan-950/70 px-3 py-1 rounded-full border border-cyan-800/50 font-mono">
+                      Report #{currentResult.passportId}
+                    </span>
+                  </div>
 
-      {/* Footer */}
-      <footer className="mt-16 border-t border-slate-900 pt-8 text-center text-xs text-slate-500 font-mono print:hidden">
-        <p>HireShield • Free AI Job Scam Detector</p>
-        <p className="mt-1 text-slate-600">Built to protect candidates from recruitment fraud and fake checks</p>
-      </footer>
+                  <TrustScoreGauge
+                    score={currentResult.trustScore}
+                    riskLevel={currentResult.riskLevel}
+                    verdict={currentResult.verdict}
+                    summary={currentResult.summary}
+                  />
+
+                  <WhatWeFoundCard entities={currentResult.entities} />
+
+                  <VerificationChecksCard 
+                    verifications={currentResult.verifications}
+                    entities={currentResult.entities}
+                  />
+
+                  <EvidenceTrailCard deductions={currentResult.deductions} />
+
+                  <SafetyRecommendationsCard 
+                    recommendations={currentResult.recommendations}
+                    riskLevel={currentResult.riskLevel}
+                  />
+
+                  <JobTrustPassport passportData={currentResult} />
+                </section>
+              )}
+            </div>
+          )}
+
+          {/* VIEW 3: VERIFIED COMPANIES */}
+          {activeTab === 'companies' && (
+            <VerifiedCompaniesView />
+          )}
+
+          {/* VIEW 4: SAFETY INSIGHTS */}
+          {activeTab === 'insights' && (
+            <SafetyInsightsView onNavigateScanner={() => setActiveTab('scanner')} />
+          )}
+
+          {/* VIEW 5: HISTORY */}
+          {activeTab === 'history' && (
+            <HistoryTab
+              history={history}
+              onSelectHistoryItem={handleSelectHistoryItem}
+              onClearHistory={handleClearHistory}
+              onSwitchToScanner={() => setActiveTab('scanner')}
+            />
+          )}
+
+          {/* VIEW 6: SAVED / WATCHLIST */}
+          {activeTab === 'watchlist' && (
+            <WatchlistView onOpenScanner={() => setActiveTab('scanner')} />
+          )}
+
+          {/* VIEW 7: MY PROFILE */}
+          {activeTab === 'profile' && (
+            <ProfileView />
+          )}
+
+          {/* VIEW 8: SETTINGS */}
+          {activeTab === 'settings' && (
+            <SettingsView />
+          )}
+
+        </main>
+
+        {/* Global Footer */}
+        <footer className="border-t border-slate-900 bg-slate-950/40 py-5 px-6 text-center text-xs text-slate-500 font-mono">
+          <p>© 2026 HireShield Security Intelligence • All verification executed deterministically.</p>
+        </footer>
+
+      </div>
+
     </div>
+  );
+}
+
+function MainApp() {
+  const { user, isLoading } = useAuth();
+
+  // Loading Splash Screen
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#070a12] flex flex-col items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-pattern opacity-40" />
+        <div className="relative z-10 flex flex-col items-center space-y-4">
+          <div className="relative flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 p-[2px] shadow-2xl shadow-cyan-500/40 animate-pulse">
+            <div className="w-full h-full bg-[#0b101d] rounded-[22px] flex items-center justify-center">
+              <Shield className="w-8 h-8 text-cyan-400" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-cyan-400 font-bold text-sm tracking-wider uppercase font-mono">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <span>Initializing HireShield Security...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // PART 1: 3D Scroll Landing Page for Unauthenticated Visitors
+  if (!user) {
+    return <ScrollLandingPage />;
+  }
+
+  // PART 2: Cyber Dashboard with Left Sidebar for Logged-In Users
+  return <Dashboard />;
+}
+
+export function App() {
+  return (
+    <PreferencesProvider>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </PreferencesProvider>
   );
 }
 

@@ -10,9 +10,6 @@ import {
   Calendar, 
   Building2, 
   Globe, 
-  CheckCircle2, 
-  XCircle,
-  Filter,
   Layers
 } from 'lucide-react';
 
@@ -28,17 +25,17 @@ export const HistoryTab = ({
   // Filter and search logic
   const filteredHistory = history.filter(item => {
     const company = (item.result?.entities?.company || item.title || '').toLowerCase();
-    const role = (item.result?.entities?.jobTitle || '').toLowerCase();
+    const role = (item.result?.entities?.jobTitle || item.result?.entities?.job_title || '').toLowerCase();
     const domain = (item.result?.entities?.domain || item.url || '').toLowerCase();
     const message = (item.jobMessage || '').toLowerCase();
-    const passportId = (item.result?.passportId || '').toLowerCase();
+    const passportId = (item.result?.passportId || item.result?.passport_id || '').toLowerCase();
     const q = searchQuery.toLowerCase().trim();
 
     const matchesSearch = !q || company.includes(q) || role.includes(q) || domain.includes(q) || message.includes(q) || passportId.includes(q);
 
     if (!matchesSearch) return false;
 
-    const risk = item.result?.riskLevel;
+    const risk = item.result?.riskLevel || item.result?.risk_level;
     if (filterRisk === 'high') return risk === 'High';
     if (filterRisk === 'suspicious') return risk === 'Suspicious' || risk === 'Moderate';
     if (filterRisk === 'low') return risk === 'Low';
@@ -48,9 +45,9 @@ export const HistoryTab = ({
 
   // Calculate statistics
   const totalScans = history.length;
-  const highRiskCount = history.filter(i => i.result?.riskLevel === 'High').length;
-  const suspiciousCount = history.filter(i => i.result?.riskLevel === 'Suspicious' || i.result?.riskLevel === 'Moderate').length;
-  const safeCount = history.filter(i => i.result?.riskLevel === 'Low').length;
+  const highRiskCount = history.filter(i => (i.result?.riskLevel || i.result?.risk_level) === 'High').length;
+  const suspiciousCount = history.filter(i => ['Suspicious', 'Moderate'].includes(i.result?.riskLevel || i.result?.risk_level)).length;
+  const safeCount = history.filter(i => (i.result?.riskLevel || i.result?.risk_level) === 'Low').length;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -64,11 +61,11 @@ export const HistoryTab = ({
                 <History className="w-5 h-5" />
               </span>
               <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight">
-                Scan History & Saved Reports
+                Scan History & Audit Logs
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              All job offer security audits saved securely in your persistent database.
+              Job offer security assessments saved securely in your persistent database.
             </p>
           </div>
 
@@ -86,7 +83,7 @@ export const HistoryTab = ({
                 type="button"
                 onClick={onClearHistory}
                 className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800/80 rounded-xl border border-slate-800 transition-colors cursor-pointer"
-                title="Clear local scan cache"
+                title="Clear audit log database"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -138,7 +135,7 @@ export const HistoryTab = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by company, role, link..."
+            placeholder="Search by company, role, domain..."
             className="w-full pl-9 pr-4 py-2 rounded-xl bg-[#0a0e17] border border-slate-800 text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
           />
         </div>
@@ -197,9 +194,13 @@ export const HistoryTab = ({
       {filteredHistory.length === 0 ? (
         <div className="bg-[#111827]/95 border border-slate-800 rounded-3xl p-12 text-center shadow-xl">
           <History className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-slate-200">No Scans Match Your Filter</h3>
+          <h3 className="text-base font-bold text-slate-200">
+            {totalScans === 0 ? "No Scans Recorded Yet" : "No Scans Match Your Filter"}
+          </h3>
           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-            Try adjusting your search query or check a new job offer in the scanner.
+            {totalScans === 0 
+              ? "Run your first job safety scan in the scanner tab to populate your audit database."
+              : "Try adjusting your search query or clear the active filter."}
           </p>
           <button
             type="button"
@@ -212,11 +213,10 @@ export const HistoryTab = ({
       ) : (
         <div className="space-y-3.5">
           {filteredHistory.map((item, idx) => {
-            const score = item.result?.trustScore ?? 0;
-            const risk = item.result?.riskLevel || 'Moderate';
+            const score = item.result?.trustScore ?? item.result?.trust_score ?? 0;
+            const risk = item.result?.riskLevel || item.result?.risk_level || 'Moderate';
             const isHigh = risk === 'High';
-            const isSuspicious = risk === 'Suspicious';
-            const isLow = risk === 'Low';
+            const isSuspicious = risk === 'Suspicious' || risk === 'Moderate';
 
             let badgeBg = isHigh 
               ? 'bg-rose-950/80 border-rose-500/50 text-rose-300' 
@@ -233,10 +233,10 @@ export const HistoryTab = ({
             let scoreColor = isHigh ? 'text-rose-400' : isSuspicious ? 'text-amber-400' : 'text-emerald-400';
 
             const company = item.result?.entities?.company || item.title || 'Job Offer Scan';
-            const role = item.result?.entities?.jobTitle || 'Role unstated';
+            const role = item.result?.entities?.jobTitle || item.result?.entities?.job_title || 'Role unstated';
             const domain = item.result?.entities?.domain || item.url || '';
             const timestamp = item.result?.timestamp || new Date().toISOString();
-            const passportId = item.result?.passportId || `ID: HSP-LOG-${idx + 1}`;
+            const passportId = item.result?.passportId || item.result?.passport_id || `ID: HSP-LOG-${idx + 1}`;
 
             return (
               <div

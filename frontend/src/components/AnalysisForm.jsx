@@ -7,10 +7,9 @@ import {
   Trash2, 
   Image as ImageIcon,
   ArrowRight,
-  Sparkles,
-  HelpCircle
+  Sparkles
 } from 'lucide-react';
-import { MOCK_SCENARIOS } from '../data/mockScenarios';
+import { SAMPLE_PROMPTS } from '../data/samplePrompts';
 
 export const AnalysisForm = ({ 
   jobMessage, 
@@ -21,9 +20,8 @@ export const AnalysisForm = ({
   setSelectedImage,
   onAnalyze, 
   isLoading,
-  onSelectScenario
+  apiError
 }) => {
-  const [activeTab, setActiveTab] = useState('text'); // 'text', 'url', 'image'
   const [dragOver, setDragOver] = useState(false);
 
   const handleImageChange = (e) => {
@@ -64,7 +62,13 @@ export const AnalysisForm = ({
     setSelectedImage(null);
   };
 
-  const hasContent = !!jobMessage.trim() || !!jobUrl.trim() || !!selectedImage;
+  const handleLoadSample = (sample) => {
+    setJobMessage(sample.message);
+    setJobUrl(sample.url || '');
+    setSelectedImage(null);
+  };
+
+  const hasContent = !!(jobMessage && jobMessage.trim()) || !!(jobUrl && jobUrl.trim()) || !!selectedImage;
 
   return (
     <div className="bg-[#111827]/95 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl backdrop-blur-md">
@@ -79,25 +83,35 @@ export const AnalysisForm = ({
             <span>Check a Job Offer</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Paste the job text, enter a link, or upload an image to find out if it's safe.
+            Paste the job text, enter a link, or upload an image to run a live threat analysis.
           </p>
         </div>
 
         {/* Friendly Preset Chips */}
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-xs text-slate-400 mr-0.5">Try an example:</span>
-          {MOCK_SCENARIOS.map((scen) => (
+          {SAMPLE_PROMPTS.map((prompt) => (
             <button
-              key={scen.id}
+              key={prompt.id}
               type="button"
-              onClick={() => onSelectScenario(scen)}
+              onClick={() => handleLoadSample(prompt)}
               className="text-xs px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all hover:border-cyan-500/50 cursor-pointer"
             >
-              {scen.id.includes('equipment') ? '🚨 $350 Fee Scam' : scen.id.includes('telegram') ? '⚠️ Telegram Scam' : '✅ Real Job Offer'}
+              {prompt.label}
             </button>
           ))}
         </div>
       </div>
+
+      {/* Error notification banner if API failed */}
+      {apiError && (
+        <div className="mt-4 p-3.5 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-300 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping"></span>
+            <span className="font-semibold">{apiError}</span>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={(e) => { e.preventDefault(); onAnalyze(); }} className="mt-5 space-y-4">
         
@@ -109,7 +123,7 @@ export const AnalysisForm = ({
               <span>Job Message / Email Text / Chat</span>
             </label>
             <span className="text-[11px] text-slate-500">
-              {jobMessage.length} characters
+              {(jobMessage || '').length} characters
             </span>
           </div>
           <textarea
@@ -203,7 +217,7 @@ export const AnalysisForm = ({
         <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-1.5 text-xs text-slate-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>100% Free, Private & Instant Security Scan</span>
+            <span>Deterministic Risk Engine • Live Verification</span>
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto">

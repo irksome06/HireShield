@@ -1,5 +1,51 @@
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
+
+# --- Auth Schemas ---
+
+class UserSignUpRequest(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100, description="Full name")
+    email: EmailStr = Field(..., description="Valid email address")
+    password: str = Field(..., min_length=6, max_length=128, description="Password (min 6 characters)")
+
+class UserLoginRequest(BaseModel):
+    email: EmailStr = Field(..., description="Registered email address")
+    password: str = Field(..., description="Account password")
+
+class GoogleAuthRequest(BaseModel):
+    credential: str = Field(..., description="Google ID Token from Google Identity Services")
+
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    auth_provider: str = "local"
+    avatar_url: Optional[str] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    bio: Optional[str] = None
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+class ProfileUpdateRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=6, max_length=128)
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+# --- Analysis & Scanner Schemas ---
 
 class JobAnalysisRequest(BaseModel):
     message: str = Field(..., description="Job description, email, or chat text to analyze")

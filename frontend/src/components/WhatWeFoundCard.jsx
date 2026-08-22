@@ -13,57 +13,58 @@ import {
 } from 'lucide-react';
 
 export const WhatWeFoundCard = ({ entities = {} }) => {
-  const hasFee = entities.paymentAmount && !entities.paymentAmount.toLowerCase().includes('none');
+  const paymentValue = entities.paymentAmount || entities.payment_amount || 'None detected';
+  const hasFee = paymentValue && !paymentValue.toLowerCase().includes('none') && paymentValue !== 'None detected';
 
   const items = [
     {
       label: 'Company Name',
-      value: entities.company || 'Not mentioned',
+      value: entities.company || 'Not detected',
       icon: Building2,
       isDanger: false
     },
     {
       label: 'Recruiter Contact',
-      value: entities.recruiter || 'Not specified',
+      value: entities.recruiter || 'Not detected',
       icon: User,
       isDanger: false
     },
     {
       label: 'Recruiter Email',
-      value: entities.email || 'None provided',
+      value: entities.email || 'Not provided',
       icon: Mail,
       isMono: true,
       isDanger: false
     },
     {
       label: 'Phone / Chat App',
-      value: entities.phone || 'None provided',
+      value: entities.phone || 'Not provided',
       icon: Phone,
       isMono: true,
       isDanger: false
     },
     {
       label: 'Job Position',
-      value: entities.jobTitle || 'Unspecified role',
+      value: entities.jobTitle || entities.job_title || 'Not specified',
       icon: Briefcase,
       isDanger: false
     },
     {
       label: 'Offered Salary',
-      value: entities.salaryClaim || 'Not specified',
+      value: entities.salaryClaim || entities.salary_claim || 'Not specified',
       icon: DollarSign,
       isDanger: false
     },
     {
       label: 'Website Domain',
-      value: entities.domain || 'None provided',
+      value: entities.domain || 'None detected',
       icon: Globe,
       isMono: true,
       isDanger: entities.domain?.includes('.top') || entities.domain?.includes('.xyz')
     },
     {
       label: 'Upfront Money / Fees Demanded',
-      value: hasFee ? entities.paymentAmount : 'None (Safe)',
+      value: hasFee ? paymentValue : 'None (Safe)',
       icon: hasFee ? AlertOctagon : CreditCard,
       isDanger: hasFee,
       isSafe: !hasFee

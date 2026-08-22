@@ -31,7 +31,7 @@ Report ID: ${passportId}
 Safety Score: ${trustScore}/100 (${riskLevel} Risk)
 Company: ${entities.company || 'Unknown'}
 Recruiter: ${entities.recruiter || 'Not specified'}
-Role: ${entities.jobTitle || 'Not specified'}
+Role: ${entities.jobTitle || entities.job_title || 'Not specified'}
 Website: ${entities.domain || 'N/A'}
 Verdict: ${verdict}
 Scanned on HireShield: Free AI Job Scam Detector`;
@@ -105,7 +105,7 @@ Scanned on HireShield: Free AI Job Scam Detector`;
             <Briefcase className="w-3.5 h-3.5 text-cyan-400" />
             <span>Role / Position</span>
           </div>
-          <p className="text-sm font-semibold text-slate-100 truncate print:text-slate-900">{entities.jobTitle || 'Not specified'}</p>
+          <p className="text-sm font-semibold text-slate-100 truncate print:text-slate-900">{entities.jobTitle || entities.job_title || 'Not specified'}</p>
         </div>
 
         <div className="p-3.5 rounded-2xl bg-[#0a0e17] border border-slate-800 print:bg-slate-50 print:border-slate-200">

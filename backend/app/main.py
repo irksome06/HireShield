@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from app.api.endpoints import router as api_router
+from app.api.auth import router as auth_router
 from app.db.database import init_db
 
 load_dotenv()
@@ -16,12 +17,12 @@ except Exception as e:
 
 app = FastAPI(
     title="HireShield API",
-    description="Recruitment Trust & Scam Intelligence API. Deterministic risk engine, AI entity extraction & Job Trust Passport protocol.",
+    description="Recruitment Trust & Scam Intelligence API. Deterministic risk engine, AI entity extraction, Job Trust Passport protocol & JWT Authentication.",
     version="1.0.0"
 )
 
 # CORS setup
-origins_str = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173")
+origins_str = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://localhost:8000")
 origins = [o.strip() for o in origins_str.split(",") if o.strip()]
 
 app.add_middleware(
@@ -32,7 +33,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API Router
+# Include API Routers
+app.include_router(auth_router, prefix="/api")
 app.include_router(api_router, prefix="/api")
 
 # Static frontend mount if dist folder exists (e.g. in Docker deployment)
@@ -47,6 +49,7 @@ else:
             "status": "operational",
             "docs": "/docs",
             "health": "/api/health",
+            "auth": "/api/auth/login",
             "history": "/api/history"
         }
 

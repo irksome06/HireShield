@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -23,6 +23,33 @@ def get_db():
         db.close()
 
 def init_db():
-    """Initializes the database schema."""
+    """Initializes the database schema and performs schema migrations."""
     import app.db.models
     Base.metadata.create_all(bind=engine)
+    
+    # Auto-migration for existing SQLite databases to add missing columns
+    try:
+        with engine.connect() as conn:
+            if DATABASE_URL.startswith("sqlite"):
+                # Check job_audit_logs
+                result = conn.execute(text("PRAGMA table_info(job_audit_logs);")).fetchall()
+                col_names = [row[1] for row in result]
+                if col_names and "user_id" not in col_names:
+                    conn.execute(text("ALTER TABLE job_audit_logs ADD COLUMN user_id INTEGER;"))
+                    conn.commit()
+                    print("Added missing user_id column to job_audit_logs.")
+
+                # Check users
+                u_result = conn.execute(text("PRAGMA table_info(users);")).fetchall()
+                u_cols = [row[1] for row in u_result]
+                if u_cols:
+                    if "phone" not in u_cols:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR(64);"))
+                    if "location" not in u_cols:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN location VARCHAR(128);"))
+                    if "bio" not in u_cols:
+                        conn.execute(text("ALTER TABLE users ADD COLUMN bio TEXT;"))
+                    conn.commit()
+                    print("Synced users table schema with profile columns.")
+    except Exception as migr_err:
+        print(f"Schema migration note: {migr_err}")
