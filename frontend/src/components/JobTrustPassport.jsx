@@ -2,19 +2,15 @@ import React, { useState } from 'react';
 import { 
   ShieldCheck, 
   ShieldAlert, 
-  Download, 
   Copy, 
   Check, 
-  QrCode, 
-  Hash, 
-  Calendar, 
-  Globe, 
-  User, 
+  Printer, 
   Building2, 
-  Briefcase,
-  Printer,
-  Sparkles,
-  Lock
+  User, 
+  Briefcase, 
+  Globe, 
+  Calendar,
+  Share2
 } from 'lucide-react';
 
 export const JobTrustPassport = ({ passportData = {} }) => {
@@ -26,13 +22,21 @@ export const JobTrustPassport = ({ passportData = {} }) => {
     trustScore = 90,
     riskLevel = "Low",
     verdict = "Verified",
-    entities = {},
-    verifications = [],
-    deductions = []
+    entities = {}
   } = passportData;
 
-  const handleCopyJson = () => {
-    navigator.clipboard.writeText(JSON.stringify(passportData, null, 2));
+  const handleCopySummary = () => {
+    const summaryText = `🛡️ HireShield Job Safety Report
+Report ID: ${passportId}
+Safety Score: ${trustScore}/100 (${riskLevel} Risk)
+Company: ${entities.company || 'Unknown'}
+Recruiter: ${entities.recruiter || 'Not specified'}
+Role: ${entities.jobTitle || 'Not specified'}
+Website: ${entities.domain || 'N/A'}
+Verdict: ${verdict}
+Scanned on HireShield: Free AI Job Scam Detector`;
+
+    navigator.clipboard.writeText(summaryText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -44,52 +48,43 @@ export const JobTrustPassport = ({ passportData = {} }) => {
   const isLowRisk = riskLevel === "Low";
 
   return (
-    <div id="passport-section" className="bg-[#111827]/95 border-2 border-cyan-500/40 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden backdrop-blur-md cyber-glow print:border-slate-300 print:bg-white print:text-black">
-      {/* Background cyber watermark */}
-      <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none print:hidden"></div>
-
-      {/* Top Banner */}
+    <div id="report-certificate" className="bg-[#111827]/95 border border-cyan-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden backdrop-blur-md cyber-glow print:border-slate-300 print:bg-white print:text-black">
+      
+      {/* Certificate Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800 print:border-slate-300">
-        <div className="flex items-center space-x-3">
-          <div className="p-3 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 print:bg-slate-100 print:text-cyan-800">
+        <div className="flex items-center space-x-3.5">
+          <div className="p-3 rounded-2xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 print:bg-slate-100 print:text-cyan-800">
             <ShieldCheck className="w-8 h-8" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold tracking-widest text-cyan-400 uppercase print:text-cyan-800">
-                Official Document
+              <span className="text-xs font-semibold tracking-wider text-cyan-400 uppercase print:text-cyan-800">
+                Official Safety Report
               </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 print:bg-slate-100 print:text-slate-700">
-                ECDSA SHA-256
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-300 font-mono print:bg-slate-100 print:text-slate-700">
+                ID: {passportId}
               </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight print:text-slate-900">
-              Job Trust Passport™
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-100 tracking-tight print:text-slate-900 mt-0.5">
+              Job Safety Certificate
             </h2>
           </div>
         </div>
 
-        {/* Passport Status Badge */}
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-[10px] font-mono text-slate-400 uppercase print:text-slate-600">Passport ID</p>
-            <p className="text-xs font-mono font-bold text-cyan-300 print:text-cyan-900">{passportId}</p>
-          </div>
-
-          <div className={`px-4 py-2.5 rounded-xl font-mono font-bold text-sm border flex items-center gap-2 ${
-            isLowRisk 
-              ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 print:bg-emerald-50 print:text-emerald-800' 
-              : 'bg-rose-950/80 border-rose-500/60 text-rose-300 print:bg-rose-50 print:text-rose-800'
-          }`}>
-            <span>SCORE: {trustScore}/100</span>
-            <span className="text-xs">({riskLevel})</span>
-          </div>
+        {/* Big Score Badge */}
+        <div className={`px-4 py-2 rounded-2xl font-bold text-sm border flex items-center gap-2 self-start sm:self-auto ${
+          isLowRisk 
+            ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 print:bg-emerald-50 print:text-emerald-800' 
+            : 'bg-rose-950/80 border-rose-500/60 text-rose-300 print:bg-rose-50 print:text-rose-800'
+        }`}>
+          <span>SCORE: {trustScore}/100</span>
+          <span className="text-xs font-normal">({riskLevel} Risk)</span>
         </div>
       </div>
 
-      {/* Passport Body Grid */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-3.5 rounded-xl bg-[#0a0e17] border border-slate-800 print:bg-slate-50 print:border-slate-200">
+      {/* Grid of Verified Details */}
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="p-3.5 rounded-2xl bg-[#0a0e17] border border-slate-800 print:bg-slate-50 print:border-slate-200">
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1 print:text-slate-600">
             <Building2 className="w-3.5 h-3.5 text-cyan-400" />
             <span>Target Company</span>
@@ -97,72 +92,61 @@ export const JobTrustPassport = ({ passportData = {} }) => {
           <p className="text-sm font-semibold text-slate-100 truncate print:text-slate-900">{entities.company || 'Unknown'}</p>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-[#0a0e17] border border-slate-800 print:bg-slate-50 print:border-slate-200">
+        <div className="p-3.5 rounded-2xl bg-[#0a0e17] border border-slate-800 print:bg-slate-50 print:border-slate-200">
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1 print:text-slate-600">
             <User className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Recruiter Identity</span>
+            <span>Recruiter Name</span>
           </div>
-          <p className="text-sm font-semibold text-slate-100 truncate print:text-slate-900">{entities.recruiter || 'Unspecified'}</p>
+          <p className="text-sm font-semibold text-slate-100 truncate print:text-slate-900">{entities.recruiter || 'Not specified'}</p>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-[#0a0e17] border border-slate-800 print:bg-slate-50 print:border-slate-200">
+        <div className="p-3.5 rounded-2xl bg-[#0a0e17] border border-slate-800 print:bg-slate-50 print:border-slate-200">
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1 print:text-slate-600">
             <Briefcase className="w-3.5 h-3.5 text-cyan-400" />
             <span>Role / Position</span>
           </div>
-          <p className="text-sm font-semibold text-slate-100 truncate print:text-slate-900">{entities.jobTitle || 'Unspecified'}</p>
+          <p className="text-sm font-semibold text-slate-100 truncate print:text-slate-900">{entities.jobTitle || 'Not specified'}</p>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-[#0a0e17] border border-slate-800 print:bg-slate-50 print:border-slate-200">
+        <div className="p-3.5 rounded-2xl bg-[#0a0e17] border border-slate-800 print:bg-slate-50 print:border-slate-200">
           <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1 print:text-slate-600">
             <Globe className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Audited Domain</span>
+            <span>Website Domain</span>
           </div>
           <p className="text-sm font-semibold font-mono text-cyan-300 truncate print:text-cyan-800">{entities.domain || 'N/A'}</p>
         </div>
       </div>
 
-      {/* Cryptographic Verification Ledger Summary */}
-      <div className="mt-4 p-4 rounded-xl bg-[#0a0e17] border border-slate-800 flex flex-wrap items-center justify-between gap-4 print:bg-slate-50 print:border-slate-200">
-        <div className="flex items-center gap-4 text-xs font-mono text-slate-400 print:text-slate-600">
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Timestamp: {new Date(timestamp).toLocaleString()}</span>
-          </div>
-          <div className="hidden sm:flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Signature: 0x{passportId.toLowerCase().replace(/[^a-z0-9]/g, '')}c79e8a</span>
-          </div>
+      {/* Footer Details & Action Buttons */}
+      <div className="mt-4 p-4 rounded-2xl bg-[#0a0e17] border border-slate-800 flex flex-wrap items-center justify-between gap-3 print:bg-slate-50 print:border-slate-200">
+        <div className="flex items-center gap-2 text-xs text-slate-400 print:text-slate-600">
+          <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Scanned on: {new Date(timestamp).toLocaleDateString()}</span>
         </div>
 
-        {/* Action Controls */}
+        {/* Actions */}
         <div className="flex items-center gap-2 print:hidden">
           <button
             type="button"
             onClick={handlePrint}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
-            title="Print or Save PDF Certificate"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+            title="Save as PDF or Print"
           >
             <Printer className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Print Certificate</span>
+            <span>Save / Print PDF</span>
           </button>
 
           <button
             type="button"
-            onClick={handleCopyJson}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
+            onClick={handleCopySummary}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-cyan-400" />}
-            <span>{copied ? 'Copied JSON' : 'Export JSON'}</span>
+            <span>{copied ? 'Copied Summary' : 'Copy Summary'}</span>
           </button>
         </div>
       </div>
 
-      {/* Security Seal & Policy */}
-      <div className="mt-4 flex items-center justify-between pt-2 border-t border-slate-800/60 print:border-slate-300 text-[10px] font-mono text-slate-500 print:text-slate-600">
-        <span>HireShield Verification Protocol • Deterministic Trust Engine</span>
-        <span className="text-cyan-400 print:text-cyan-800">Status: {verdict}</span>
-      </div>
     </div>
   );
 };

@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { AnalysisForm } from './components/AnalysisForm';
+import { AnalyzingState } from './components/AnalyzingState';
 import { TrustScoreGauge } from './components/TrustScoreGauge';
-import { ExtractedEntitiesCard } from './components/ExtractedEntitiesCard';
+import { WhatWeFoundCard } from './components/WhatWeFoundCard';
+import { VerificationChecksCard } from './components/VerificationChecksCard';
 import { EvidenceTrailCard } from './components/EvidenceTrailCard';
 import { SafetyRecommendationsCard } from './components/SafetyRecommendationsCard';
 import { JobTrustPassport } from './components/JobTrustPassport';
 import { HistoryDrawer } from './components/HistoryDrawer';
 import { MOCK_SCENARIOS } from './data/mockScenarios';
-import { Shield, Sparkles, Terminal, Activity, Info, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, FileSearch, Sparkles, RefreshCw } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
@@ -43,14 +45,13 @@ export function App() {
         if (res.ok) {
           setBackendStatus('connected');
           
-          // Fetch persistent history from PostgreSQL / SQLite
           try {
             const histRes = await fetch(`${API_BASE}/api/history?limit=15`);
             if (histRes.ok) {
               const histData = await histRes.json();
               if (Array.isArray(histData) && histData.length > 0) {
                 const formattedHistory = histData.map(item => ({
-                  title: item.entities?.company || item.verdict || "Audited Job",
+                  title: item.entities?.company || item.verdict || "Scanned Job",
                   jobMessage: item.summary || "",
                   url: item.entities?.domain || "",
                   result: {
@@ -67,7 +68,6 @@ export function App() {
                     timestamp: item.timestamp
                   }
                 }));
-                // Merge with default scenarios
                 setHistory(prev => [...formattedHistory, ...prev]);
               }
             }
@@ -90,6 +90,11 @@ export function App() {
     setJobUrl(scenario.url);
     setSelectedImage(null);
     setCurrentResult(scenario.result);
+    // Smooth scroll to results
+    const resultsElem = document.getElementById('results-view');
+    if (resultsElem) {
+      resultsElem.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   // Local Rule-Based Heuristic Fallback Engine
@@ -106,10 +111,10 @@ export function App() {
       score -= 40;
       deductions.push({
         id: 1,
-        signal: "Upfront Payment / Equipment Fee Demand",
+        signal: "Upfront Money / Equipment Fee Demanded",
         penalty: -40,
         severity: "Critical",
-        description: "Message explicitly requests candidate to pay fees, equipment charges, or wire money."
+        description: "Demands advance payment (Zelle, Wire, Gift card) for home-office hardware. Real employers NEVER charge candidates for equipment."
       });
     }
 
@@ -118,10 +123,10 @@ export function App() {
       score -= 20;
       deductions.push({
         id: 2,
-        signal: "Personal Data / Urgency Pressure",
+        signal: "Urgent SSN / Banking Data Request",
         penalty: -20,
         severity: "High",
-        description: "Demands sensitive identifiers (SSN/OTP) or applies artificial urgent pressure."
+        description: "Asks for confidential identity numbers (SSN/OTP/banking) before formal contracts or legitimate onboarding."
       });
     }
 
@@ -130,10 +135,10 @@ export function App() {
       score -= 25;
       deductions.push({
         id: 3,
-        signal: "Off-Platform / Untraceable Channel",
+        signal: "Off-Platform Chat / Crypto Task Trap",
         penalty: -25,
         severity: "High",
-        description: "Redirects applicant to anonymous communication networks (Telegram/WhatsApp) or crypto payouts."
+        description: "Directs communication to unmonitored Telegram/WhatsApp handles or crypto task platforms."
       });
     }
 
@@ -142,30 +147,30 @@ export function App() {
       score -= 25;
       deductions.push({
         id: 4,
-        signal: "High-Risk Domain TLD",
+        signal: "Suspicious / Fake Website Domain",
         penalty: -25,
         severity: "High",
-        description: "Domain utilizes top-level domain frequently weaponized in recruitment phishing."
+        description: "Uses a temporary or high-abuse website extension frequently registered for phishing."
       });
     }
 
     // Determine Risk Tier
     let riskLevel = "Low";
     let riskColor = "emerald";
-    let verdict = "Verified & High Trust Job Opportunity";
+    let verdict = "Verified & High-Trust Job Opportunity";
 
     if (score < 35) {
       riskLevel = "High";
       riskColor = "rose";
-      verdict = "High-Risk Recruitment Scam Pattern Detected";
+      verdict = "High Risk — Likely a Recruitment Scam";
     } else if (score < 60) {
       riskLevel = "Suspicious";
       riskColor = "amber";
-      verdict = "Suspicious Indicators Require Verification";
+      verdict = "Suspicious — Proceed with Extreme Caution";
     } else if (score < 80) {
       riskLevel = "Moderate";
       riskColor = "sky";
-      verdict = "Moderate Confidence — Review Recommended";
+      verdict = "Moderate Risk — Verify Company Directly";
     }
 
     const extractedEmail = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/)?.[0] || "Not provided";
@@ -182,15 +187,15 @@ export function App() {
     }
 
     verifications.push({
-      name: "Domain Reputation Heuristic",
+      name: "Website Link Check",
       status: score > 70 ? "Passed" : score > 40 ? "Warning" : "Failed",
-      detail: domainName !== "None detected" ? `Audited domain: ${domainName}` : "No direct URL submitted"
+      detail: domainName !== "None detected" ? `Scanned website: ${domainName}` : "No link provided"
     });
 
     verifications.push({
-      name: "Recruiter Email MX Check",
+      name: "Recruiter Email Check",
       status: extractedEmail.includes('@') && !extractedEmail.includes('gmail') ? "Passed" : "Warning",
-      detail: extractedEmail !== "Not provided" ? `Sender identity: ${extractedEmail}` : "No corporate email detected"
+      detail: extractedEmail !== "Not provided" ? `Sender: ${extractedEmail}` : "No official email provided"
     });
 
     return {
@@ -199,14 +204,14 @@ export function App() {
       riskColor,
       verdict,
       summary: deductions.length > 0
-        ? `Identified ${deductions.length} specific threat vectors resulting in a final score of ${score}/100.`
-        : "No significant scam triggers or fraudulent keywords were detected in the provided submission.",
+        ? `Identified ${deductions.length} major red flags resulting in a Safety Score of ${score}/100.`
+        : "No scam triggers, upfront fee requests, or fake links were found in this job offer.",
       entities: {
-        company: text.includes('Apex') ? 'Apex Global Logistics' : text.includes('CloudScale') ? 'CloudScale Systems' : 'Extracted Entity',
+        company: text.includes('Apex') ? 'Apex Global Logistics' : text.includes('CloudScale') ? 'CloudScale Systems' : 'Extracted Company',
         recruiter: text.includes('Sarah') ? 'Sarah Jenkins' : text.includes('Michael') ? 'Michael Sterling' : 'Unspecified Recruiter',
         email: extractedEmail,
         phone: extractedPhone,
-        jobTitle: text.includes('Data Entry') ? 'Remote Data Entry' : text.includes('Frontend') ? 'Senior Frontend Engineer' : 'Inspected Role',
+        jobTitle: text.includes('Data Entry') ? 'Remote Data Entry' : text.includes('Frontend') ? 'Senior Frontend Engineer' : 'Offered Position',
         domain: domainName,
         paymentAmount: deductions.some(d => d.id === 1) ? '$350.00 Advance Fee' : 'None detected',
         salaryClaim: text.match(/\$\d+(\/hr|\/hour|\/day|\/year|,\d+)/i)?.[0] || 'Market Standard'
@@ -214,9 +219,9 @@ export function App() {
       deductions,
       verifications,
       recommendations: score < 50 ? [
-        "DO NOT send money, gift cards, or crypto under any circumstance.",
-        "Refuse to transfer onboarding communications to unverified private chat apps.",
-        "Cross-verify the job opening on the company's official career portal."
+        "DO NOT send any money, wire transfers, or gift cards under any circumstances.",
+        "Refuse to transfer onboarding conversations to unverified private chat apps.",
+        "Verify the job requisition number directly on the official company career portal."
       ] : [
         "Confirm that interview invites arrive from the verified company domain.",
         "Never submit sensitive banking info until contracts are formally counter-signed."
@@ -230,8 +235,9 @@ export function App() {
   const handleAnalyze = async () => {
     setIsLoading(true);
 
+    const startTime = Date.now();
+
     try {
-      // Attempt backend API call with screenshot OCR data if attached
       const response = await fetch(`${API_BASE}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -242,6 +248,12 @@ export function App() {
           image_base64: selectedImage?.preview || null
         })
       });
+
+      // Ensure minimum animated scan duration (800ms) for smooth UX
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 800) {
+        await new Promise(r => setTimeout(r, 800 - elapsed));
+      }
 
       if (response.ok) {
         const data = await response.json();
@@ -272,7 +284,7 @@ export function App() {
         setBackendStatus('connected');
         setHistory(prev => [
           {
-            title: formatted.entities.company || "Job Audit",
+            title: formatted.entities.company || "Scanned Job",
             jobMessage: jobMessage || "Audited screenshot / URL",
             url: jobUrl,
             result: formatted
@@ -283,17 +295,18 @@ export function App() {
         return;
       }
     } catch (e) {
-      console.warn("Backend API not reachable; using local deterministic risk engine fallback.", e);
+      console.warn("Backend API not reachable; using local rule engine fallback.", e);
       setBackendStatus('offline');
     }
 
-    // Fallback to local engine if backend failed
+    // Fallback to local engine
+    await new Promise(r => setTimeout(r, 600));
     const res = runLocalRuleEngine(jobMessage, jobUrl);
     setCurrentResult(res);
     setHistory(prev => [
       {
-        title: res.entities.company || "Job Audit",
-        jobMessage,
+        title: res.entities.company || "Scanned Job",
+        jobMessage: jobMessage || "Audited offer",
         url: jobUrl,
         result: res
       },
@@ -320,11 +333,11 @@ export function App() {
       />
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 mt-2">
-        {/* Hero Section */}
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 space-y-7 mt-2">
+        {/* Friendly Hero */}
         <Hero />
 
-        {/* Console & Submission Area */}
+        {/* Input Console */}
         <section id="analysis-form">
           <AnalysisForm
             jobMessage={jobMessage}
@@ -339,23 +352,27 @@ export function App() {
           />
         </section>
 
-        {/* Live Threat Intelligence Results Display */}
-        {currentResult && (
-          <section className="space-y-6 pt-2 animate-fadeIn">
+        {/* Animated Scanning State */}
+        {isLoading && <AnalyzingState />}
+
+        {/* Simple, Plain-English Results Section */}
+        {currentResult && !isLoading && (
+          <section id="results-view" className="space-y-6 pt-3 animate-fadeIn">
+            
             {/* Section Header */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <div className="flex items-center gap-2">
-                <Terminal className="w-5 h-5 text-cyan-400" />
+                <FileSearch className="w-5 h-5 text-cyan-400" />
                 <h2 className="text-xl font-bold text-slate-100 tracking-tight">
-                  Scam Intelligence & Trust Breakdown
+                  Job Safety Assessment
                 </h2>
               </div>
-              <span className="text-xs font-mono text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-md border border-cyan-800/40">
-                Audit ID: {currentResult.passportId}
+              <span className="text-xs text-cyan-300 bg-cyan-950/70 px-3 py-1 rounded-full border border-cyan-800/50 font-mono">
+                Report #{currentResult.passportId}
               </span>
             </div>
 
-            {/* Score & Verdict Card */}
+            {/* 1. Risk / Safety Score Gauge */}
             <TrustScoreGauge
               score={currentResult.trustScore}
               riskLevel={currentResult.riskLevel}
@@ -363,28 +380,32 @@ export function App() {
               summary={currentResult.summary}
             />
 
-            {/* Extracted Entities */}
-            <ExtractedEntitiesCard entities={currentResult.entities} />
+            {/* 2. What We Found */}
+            <WhatWeFoundCard entities={currentResult.entities} />
 
-            {/* Deductions & External Verifications */}
-            <EvidenceTrailCard 
-              deductions={currentResult.deductions}
+            {/* 3. Three Core Verification Checks */}
+            <VerificationChecksCard 
               verifications={currentResult.verifications}
+              entities={currentResult.entities}
             />
 
-            {/* Safety Protocol */}
+            {/* 4. Warning Signs & Red Flags */}
+            <EvidenceTrailCard deductions={currentResult.deductions} />
+
+            {/* 5. What You Should Do Next */}
             <SafetyRecommendationsCard 
               recommendations={currentResult.recommendations}
               riskLevel={currentResult.riskLevel}
             />
 
-            {/* Official Job Trust Passport */}
+            {/* 6. Official Job Safety Certificate */}
             <JobTrustPassport passportData={currentResult} />
+
           </section>
         )}
       </main>
 
-      {/* History Slide-over Drawer */}
+      {/* Slide-over Saved Scans Drawer */}
       <HistoryDrawer
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
@@ -395,8 +416,8 @@ export function App() {
 
       {/* Footer */}
       <footer className="mt-16 border-t border-slate-900 pt-8 text-center text-xs text-slate-500 font-mono print:hidden">
-        <p>HireShield Intelligence Platform • Hackathon Release</p>
-        <p className="mt-1 text-slate-600">Built with React, Vite, Tailwind CSS, and FastAPI Risk Engine</p>
+        <p>HireShield • Free AI Job Scam Detector</p>
+        <p className="mt-1 text-slate-600">Built to protect candidates from recruitment fraud and fake checks</p>
       </footer>
     </div>
   );
