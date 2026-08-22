@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { AnalysisForm } from './components/AnalysisForm';
@@ -9,7 +9,9 @@ import { SafetyRecommendationsCard } from './components/SafetyRecommendationsCar
 import { JobTrustPassport } from './components/JobTrustPassport';
 import { HistoryDrawer } from './components/HistoryDrawer';
 import { MOCK_SCENARIOS } from './data/mockScenarios';
-import { Shield, Sparkles, Terminal, Activity, Info } from 'lucide-react';
+import { Shield, Sparkles, Terminal, Activity, Info, CheckCircle2 } from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 export function App() {
   // Active Input State
@@ -20,6 +22,7 @@ export function App() {
   // Analysis Result State
   const [currentResult, setCurrentResult] = useState(MOCK_SCENARIOS[0].result);
   const [isLoading, setIsLoading] = useState(false);
+  const [backendStatus, setBackendStatus] = useState('connecting'); // 'connected' | 'offline'
   
   // History & Navigation State
   const [history, setHistory] = useState(
@@ -32,6 +35,23 @@ export function App() {
   );
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
+  // Check backend connectivity on mount
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/health`);
+        if (res.ok) {
+          setBackendStatus('connected');
+        } else {
+          setBackendStatus('offline');
+        }
+      } catch (err) {
+        setBackendStatus('offline');
+      }
+    };
+    checkBackend();
+  }, []);
+
   // Scenario Selection Handler
   const handleSelectScenario = (scenario) => {
     setJobMessage(scenario.message);
@@ -40,7 +60,7 @@ export function App() {
     setCurrentResult(scenario.result);
   };
 
-  // Local Rule-Based Heuristic Fallback Analysis for Checkpoint 1 (until FastAPI backend is connected)
+  // Local Rule-Based Heuristic Fallback Engine
   const runLocalRuleEngine = (text, url) => {
     const lowerText = (text || '').toLowerCase();
     const lowerUrl = (url || '').toLowerCase();
@@ -102,26 +122,24 @@ export function App() {
     let riskColor = "emerald";
     let verdict = "Verified & High Trust Job Opportunity";
 
-    if (score < 40) {
+    if (score < 35) {
       riskLevel = "High";
       riskColor = "rose";
       verdict = "High-Risk Recruitment Scam Pattern Detected";
-    } else if (score < 70) {
+    } else if (score < 60) {
       riskLevel = "Suspicious";
       riskColor = "amber";
       verdict = "Suspicious Indicators Require Verification";
-    } else if (score < 90) {
+    } else if (score < 80) {
       riskLevel = "Moderate";
       riskColor = "sky";
       verdict = "Moderate Confidence — Review Recommended";
     }
 
-    // Extract rudimentary entities
     const extractedEmail = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/)?.[0] || "Not provided";
     const extractedPhone = text.match(/(\+?\d{1,3}[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/)?.[0] || "Not provided";
     
-    // Domain extraction
-    let domainName = "Not provided";
+    let domainName = "None detected";
     if (url) {
       try {
         const u = new URL(url.startsWith('http') ? url : `https://${url}`);
@@ -134,7 +152,7 @@ export function App() {
     verifications.push({
       name: "Domain Reputation Heuristic",
       status: score > 70 ? "Passed" : score > 40 ? "Warning" : "Failed",
-      detail: domainName !== "Not provided" ? `Audited domain: ${domainName}` : "No direct URL submitted"
+      detail: domainName !== "None detected" ? `Audited domain: ${domainName}` : "No direct URL submitted"
     });
 
     verifications.push({
@@ -143,7 +161,7 @@ export function App() {
       detail: extractedEmail !== "Not provided" ? `Sender identity: ${extractedEmail}` : "No corporate email detected"
     });
 
-    const calculatedResult = {
+    return {
       trustScore: Math.max(0, score),
       riskLevel,
       riskColor,
@@ -174,28 +192,81 @@ export function App() {
       passportId: `HSP-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}-${riskLevel[0]}`,
       timestamp: new Date().toISOString()
     };
-
-    return calculatedResult;
   };
 
+  // Execute Analysis (FastAPI Backend with local fallback)
   const handleAnalyze = async () => {
     setIsLoading(true);
 
-    // Simulate analysis delay for realistic audit feedback
-    setTimeout(() => {
-      const res = runLocalRuleEngine(jobMessage, jobUrl);
-      setCurrentResult(res);
-      setHistory(prev => [
-        {
-          title: res.entities.company || "Job Audit",
-          jobMessage,
-          url: jobUrl,
-          result: res
-        },
-        ...prev
-      ]);
-      setIsLoading(false);
-    }, 600);
+    try {
+      // Attempt backend API call
+      const response = await fetch(`${API_BASE}/api/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: jobMessage,
+          url: jobUrl || null,
+          has_image: !!selectedImage
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const formatted = {
+          trustScore: data.trust_score,
+          riskLevel: data.risk_level,
+          riskColor: data.risk_color,
+          verdict: data.verdict,
+          summary: data.summary,
+          entities: {
+            company: data.entities?.company || 'Not detected',
+            recruiter: data.entities?.recruiter || 'Not detected',
+            email: data.entities?.email || 'Not provided',
+            phone: data.entities?.phone || 'Not provided',
+            jobTitle: data.entities?.job_title || 'Not specified',
+            domain: data.entities?.domain || 'None detected',
+            paymentAmount: data.entities?.payment_amount || 'None detected',
+            salaryClaim: data.entities?.salary_claim || 'Not specified'
+          },
+          deductions: data.deductions || [],
+          verifications: data.verifications || [],
+          recommendations: data.recommendations || [],
+          passportId: data.passport_id,
+          timestamp: data.timestamp
+        };
+
+        setCurrentResult(formatted);
+        setBackendStatus('connected');
+        setHistory(prev => [
+          {
+            title: formatted.entities.company || "Job Audit",
+            jobMessage,
+            url: jobUrl,
+            result: formatted
+          },
+          ...prev
+        ]);
+        setIsLoading(false);
+        return;
+      }
+    } catch (e) {
+      console.warn("Backend API not reachable; using local deterministic risk engine fallback.", e);
+      setBackendStatus('offline');
+    }
+
+    // Fallback to local engine if backend failed
+    const res = runLocalRuleEngine(jobMessage, jobUrl);
+    setCurrentResult(res);
+    setHistory(prev => [
+      {
+        title: res.entities.company || "Job Audit",
+        jobMessage,
+        url: jobUrl,
+        result: res
+      },
+      ...prev
+    ]);
+    setIsLoading(false);
   };
 
   const handleSelectHistoryItem = (item) => {
@@ -212,6 +283,7 @@ export function App() {
       <Navbar 
         onOpenHistory={() => setIsHistoryOpen(true)}
         historyCount={history.length}
+        backendStatus={backendStatus}
       />
 
       {/* Main Container */}
@@ -289,7 +361,7 @@ export function App() {
       />
 
       {/* Footer */}
-      <footer className="mt-16 border-t border-slate-900 pt-8 text-center text-xs text-slate-500 font-mono">
+      <footer className="mt-16 border-t border-slate-900 pt-8 text-center text-xs text-slate-500 font-mono print:hidden">
         <p>HireShield Intelligence Platform • Hackathon Release</p>
         <p className="mt-1 text-slate-600">Built with React, Vite, Tailwind CSS, and FastAPI Risk Engine</p>
       </footer>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   FileSpreadsheet, 
   MinusCircle, 
@@ -7,16 +7,25 @@ import {
   ShieldCheck, 
   HelpCircle,
   ExternalLink,
-  Search
+  Search,
+  Filter
 } from 'lucide-react';
 
 export const EvidenceTrailCard = ({ deductions = [], verifications = [] }) => {
+  const [filter, setFilter] = useState('all'); // 'all', 'critical', 'high'
+
+  const filteredDeductions = deductions.filter(d => {
+    if (filter === 'critical') return d.severity === 'Critical';
+    if (filter === 'high') return d.severity === 'Critical' || d.severity === 'High';
+    return true;
+  });
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       
       {/* Left: Deductions Breakdown (7 cols) */}
       <div className="lg:col-span-7 bg-[#111827]/90 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl backdrop-blur-sm">
-        <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800/80">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-800/80 gap-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-rose-950/60 border border-rose-800/50 text-rose-400">
               <AlertOctagon className="w-4 h-4" />
@@ -26,9 +35,37 @@ export const EvidenceTrailCard = ({ deductions = [], verifications = [] }) => {
               <p className="text-xs text-slate-400">Point breakdown calculated directly from rule-based risk triggers</p>
             </div>
           </div>
-          <span className="text-[11px] font-mono text-slate-400">
-            {deductions.length} Signals Flagged
-          </span>
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1 bg-[#0a0e17] p-1 rounded-lg border border-slate-800 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setFilter('all')}
+              className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors ${
+                filter === 'all' ? 'bg-slate-800 text-cyan-300 font-bold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              All ({deductions.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter('high')}
+              className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors ${
+                filter === 'high' ? 'bg-amber-950/80 text-amber-300 font-bold border border-amber-800/60' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              High+
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter('critical')}
+              className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors ${
+                filter === 'critical' ? 'bg-rose-950/80 text-rose-300 font-bold border border-rose-800/60' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Critical
+            </button>
+          </div>
         </div>
 
         {deductions.length === 0 ? (
@@ -37,9 +74,13 @@ export const EvidenceTrailCard = ({ deductions = [], verifications = [] }) => {
             <p className="text-sm font-semibold text-emerald-300">Clean Audit — 0 Penalties Deducted</p>
             <p className="text-xs text-slate-400 mt-1">No malicious keywords, financial demands, or domain anomalies found.</p>
           </div>
+        ) : filteredDeductions.length === 0 ? (
+          <div className="p-6 rounded-xl bg-slate-900/50 border border-slate-800 text-center text-xs text-slate-400">
+            No deductions match the selected severity filter.
+          </div>
         ) : (
           <div className="space-y-3">
-            {deductions.map((item) => (
+            {filteredDeductions.map((item) => (
               <div 
                 key={item.id}
                 className="p-3.5 rounded-xl bg-[#0d131f] border border-slate-800/80 hover:border-slate-700 transition-colors"
@@ -96,7 +137,7 @@ export const EvidenceTrailCard = ({ deductions = [], verifications = [] }) => {
             return (
               <div 
                 key={i}
-                className="p-3 rounded-xl bg-[#0d131f] border border-slate-800/80"
+                className="p-3 rounded-xl bg-[#0d131f] border border-slate-800/80 hover:border-slate-700 transition-colors"
               >
                 <div className="flex items-center justify-between text-xs font-semibold mb-1">
                   <span className="text-slate-200">{v.name}</span>

@@ -1,6 +1,9 @@
-import { ShieldCheck, Activity, History, Terminal } from 'lucide-react';
+import React from 'react';
+import { ShieldCheck, Activity, History, Terminal, Server, Wifi, WifiOff } from 'lucide-react';
 
-export const Navbar = ({ onOpenHistory, historyCount = 3 }) => {
+export const Navbar = ({ onOpenHistory, historyCount = 3, backendStatus = "connected" }) => {
+  const isOnline = backendStatus === "connected";
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-[#0a0e17]/85 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -30,10 +33,24 @@ export const Navbar = ({ onOpenHistory, historyCount = 3 }) => {
 
         {/* Engine Status & Quick Navigation */}
         <div className="flex items-center space-x-3">
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300 font-mono">
-            <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span>Deterministic Risk Engine:</span>
-            <span className="text-emerald-400 font-semibold">Active</span>
+          {/* Backend Status Badge */}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300 font-mono">
+            {isOnline ? (
+              <>
+                <Server className="w-3.5 h-3.5 text-emerald-400" />
+                <span>FastAPI Engine:</span>
+                <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Live :8000
+                </span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-3.5 h-3.5 text-amber-400" />
+                <span>Risk Engine:</span>
+                <span className="text-amber-400 font-semibold">Local Fallback</span>
+              </>
+            )}
           </div>
 
           <button
@@ -50,7 +67,7 @@ export const Navbar = ({ onOpenHistory, historyCount = 3 }) => {
 
           <a
             href="#passport-section"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-cyan-300 bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-800/60 rounded-lg transition-colors"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-cyan-300 bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-800/60 rounded-lg transition-colors"
           >
             <Terminal className="w-3.5 h-3.5 text-cyan-400" />
             <span>Trust Passport</span>
