@@ -270,14 +270,8 @@ function Dashboard() {
             </h2>
           </div>
 
-          {/* Right: API Status & User Avatar */}
-          <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
-            <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-slate-900/90 border border-slate-800 text-[11px] sm:text-xs text-slate-400 font-mono">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${backendStatus === 'connected' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
-              <span className="hidden sm:inline">{backendStatus === 'connected' ? 'FastAPI 2.0 Online' : 'Backend Offline'}</span>
-              <span className="inline sm:hidden">{backendStatus === 'connected' ? 'Online' : 'Offline'}</span>
-            </div>
-
+          {/* Right: User Avatar */}
+          <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => setActiveTab('profile')}
               className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-cyan-400 cursor-pointer hover:border-cyan-500/50 transition-colors"

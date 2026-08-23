@@ -115,9 +115,6 @@ export default function ScrollLandingPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black tracking-tight text-white">Hire<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">Shield</span></span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono">
-                  PRO 2.0
-                </span>
               </div>
               <p className="text-[11px] text-slate-400 font-medium">Recruitment Threat Intelligence</p>
             </div>
