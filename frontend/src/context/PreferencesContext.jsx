@@ -5,7 +5,7 @@ const PreferencesContext = createContext(null);
 const TRANSLATIONS = {
   'en-US': {
     // Nav & Sidebar
-    'nav.home': 'Home / Station',
+    'nav.home': 'Home',
     'nav.scanner': 'Check a Job Offer',
     'nav.companies': 'Verified Companies',
     'nav.insights': 'Safety Insights',
@@ -182,7 +182,7 @@ const TRANSLATIONS = {
 
   'de-DE': {
     // Nav & Sidebar
-    'nav.home': 'Startseite / Station',
+    'nav.home': 'Startseite',
     'nav.scanner': 'Stellenangebot prüfen',
     'nav.companies': 'Verifizierte Unternehmen',
     'nav.insights': 'Sicherheits-Einblicke',
@@ -241,7 +241,7 @@ const TRANSLATIONS = {
 
   'fr-FR': {
     // Nav & Sidebar
-    'nav.home': 'Accueil / Station',
+    'nav.home': 'Accueil',
     'nav.scanner': 'Vérifier une Offre',
     'nav.companies': 'Entreprises Vérifiées',
     'nav.insights': 'Aperçus de Sécurité',
@@ -300,7 +300,7 @@ const TRANSLATIONS = {
 
   'en-GB': {
     // Identical to en-US with UK spelling
-    'nav.home': 'Home / Station',
+    'nav.home': 'Home',
     'nav.scanner': 'Check a Job Offer',
     'nav.companies': 'Verified Companies',
     'nav.insights': 'Safety Insights',

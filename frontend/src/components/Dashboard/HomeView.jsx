@@ -285,7 +285,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
                 value={quickScanInput}
                 onChange={(e) => setQuickScanInput(e.target.value)}
                 placeholder="Paste recruiter email, career link, or company domain (e.g. careers-stripe.com or jobs@apple.com)..."
-                className="w-full pl-11 pr-4 py-3.5 bg-slate-950/90 border border-slate-700/90 rounded-2xl text-xs sm:text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all font-mono shadow-inner"
+                className="w-full pl-11 pr-4 py-3.5 bg-slate-950/90 border border-slate-700/90 rounded-2xl text-xs sm:text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all font-normal shadow-inner"
               />
             </div>
 
