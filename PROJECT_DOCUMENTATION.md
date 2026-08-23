@@ -5,6 +5,10 @@
 
 Unlike black-box generative models that provide subjective opinions, HireShield couples **Google Gemini 1.5 entity extraction** with a **deterministic mathematical risk deduction engine** and live **DNS/MX network telemetry** to deliver tamper-proof **Job Trust Passports™**.
 
+* **🌐 Live Deployed Application**: [https://hireshield-ro6i.onrender.com](https://hireshield-ro6i.onrender.com)
+* **🎥 Demo Walkthrough Video**: [https://drive.google.com/file/d/1MCPUq-A6OGeyXfKM-25laUY6rRLW4mTh/view?usp=drive_link](https://drive.google.com/file/d/1MCPUq-A6OGeyXfKM-25laUY6rRLW4mTh/view?usp=drive_link)
+* **📂 GitHub Repository**: [https://github.com/irksome06/HireShield](https://github.com/irksome06/HireShield)
+
 ---
 
 ## 2. Threat Vector Modeling & Defense Taxonomy
