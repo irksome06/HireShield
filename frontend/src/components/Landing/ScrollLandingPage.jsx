@@ -11,10 +11,13 @@ import Scene2Requisition from './Scenes/Scene2Requisition';
 import Scene3ThreatEngine from './Scenes/Scene3ThreatEngine';
 import Scene4Passport from './Scenes/Scene4Passport';
 import Scene5AccessGateway from './Scenes/Scene5AccessGateway';
+import SceneLaptop3D from './SceneLaptop3D';
 import AuthModal from './AuthModal';
 
 export default function ScrollLandingPage() {
   const [activeScene, setActiveScene] = useState(0); // 0, 1, 2, 3, 4
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('signin');
   const [glowTrigger, setGlowTrigger] = useState(false);
@@ -58,6 +61,21 @@ export default function ScrollLandingPage() {
     }
   }, [activeScene]);
 
+  const handleScroll = (e) => {
+    const el = e.target;
+    if (el) {
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      const progress = maxScroll > 0 ? el.scrollTop / maxScroll : 0;
+      setScrollProgress(Math.min(Math.max(progress, 0), 1));
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    const x = (e.clientX / window.innerWidth) * 2 - 1;
+    const y = (e.clientY / window.innerHeight) * 2 - 1;
+    setMousePos({ x, y });
+  };
+
   const scrollToScene = (index) => {
     const el = sceneRefs[index]?.current;
     if (el) {
@@ -81,8 +99,17 @@ export default function ScrollLandingPage() {
   return (
     <div 
       ref={scrollContainerRef}
+      onScroll={handleScroll}
+      onMouseMove={handleMouseMove}
       className="relative w-full h-screen overflow-y-auto scroll-smooth snap-y snap-mandatory bg-[#07090e] text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 font-sans"
     >
+      {/* ---------------------------------------------------- */}
+      {/* 3D INTERACTIVE CYBER LAPTOP BACKDROP RIG            */}
+      {/* ---------------------------------------------------- */}
+      <div className="fixed inset-0 pointer-events-none z-10 flex items-center justify-center overflow-hidden opacity-90 transition-opacity duration-500">
+        <SceneLaptop3D scrollProgress={scrollProgress} mousePos={mousePos} />
+      </div>
+
       {/* ---------------------------------------------------- */}
       {/* FLUID AMBIENT GLOW & FLOATING PARTICLE FLARES         */}
       {/* ---------------------------------------------------- */}
