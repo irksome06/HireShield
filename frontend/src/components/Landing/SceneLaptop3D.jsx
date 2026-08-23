@@ -45,7 +45,7 @@ export default function SceneLaptop3D({ scrollProgress = 0, mousePos = { x: 0, y
           rotY: -12 + tiltY * 0.7,
           rotZ: -1,
           scale: 0.94 + scrollProgress * 0.1,
-          transY: 0,
+          transY: 45,
           transZ: 0
         };
       case 1:
@@ -54,7 +54,7 @@ export default function SceneLaptop3D({ scrollProgress = 0, mousePos = { x: 0, y
           rotY: 6 + tiltY * 0.8,
           rotZ: 0.5,
           scale: 0.98,
-          transY: 0,
+          transY: 65,
           transZ: 15
         };
       case 2:
@@ -63,7 +63,7 @@ export default function SceneLaptop3D({ scrollProgress = 0, mousePos = { x: 0, y
           rotY: 0 + tiltY * 0.9,
           rotZ: 0,
           scale: 1.02,
-          transY: 0,
+          transY: 60,
           transZ: 25
         };
       case 3:
@@ -72,11 +72,11 @@ export default function SceneLaptop3D({ scrollProgress = 0, mousePos = { x: 0, y
           rotY: -4 + tiltY * 0.8,
           rotZ: -0.5,
           scale: 0.98,
-          transY: 0,
+          transY: 65,
           transZ: 20
         };
       default:
-        return { rotX: 14, rotY: 0, rotZ: 0, scale: 0.96, transY: 0, transZ: 0 };
+        return { rotX: 14, rotY: 0, rotZ: 0, scale: 0.96, transY: 55, transZ: 0 };
     }
   };
 
