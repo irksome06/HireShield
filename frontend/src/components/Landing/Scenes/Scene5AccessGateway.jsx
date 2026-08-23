@@ -23,27 +23,6 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
   const [localError, setLocalError] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const googleBtnRef = useRef(null);
-
-  // Render official Google button
-  useEffect(() => {
-    const container = googleBtnRef.current;
-    if (container) {
-      renderOfficialGoogleButton(container, {
-        authMode,
-        onCredential: async (credential) => {
-          setIsGoogleLoading(true);
-          setLocalError('');
-          const res = await loginWithGoogle(credential);
-          setIsGoogleLoading(false);
-          if (!res.success && res.error) {
-            setLocalError(res.error);
-          }
-        }
-      });
-    }
-  }, [authMode]);
-
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (localError) setLocalError('');
@@ -158,8 +137,7 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
           )}
 
           {/* Google Sign-In Container */}
-          <div className="mb-4 flex flex-col items-center justify-center gap-2">
-            <div ref={googleBtnRef} className="w-full flex justify-center empty:hidden" />
+          <div className="mb-4">
             <button
               type="button"
               onClick={handleGoogleClick}

@@ -34,29 +34,6 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
     if (clearError) clearError();
   }, [initialMode, isOpen]);
 
-  // Render official Google button when modal opens
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const container = googleBtnRef.current;
-    if (container) {
-      renderOfficialGoogleButton(container, {
-        authMode,
-        onCredential: async (credential) => {
-          setIsGoogleLoading(true);
-          setLocalError('');
-          const res = await loginWithGoogle(credential);
-          setIsGoogleLoading(false);
-          if (res.success) {
-            onClose();
-          } else if (res.error) {
-            setLocalError(res.error);
-          }
-        }
-      });
-    }
-  }, [isOpen, authMode]);
-
   if (!isOpen) return null;
 
   const handleChange = (e) => {
@@ -185,11 +162,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
         )}
 
         {/* Google Sign In Container */}
-        <div className="mb-4 flex flex-col items-center justify-center gap-2">
-          {/* Official GSI Rendered Button */}
-          <div ref={googleBtnRef} className="w-full flex justify-center empty:hidden" />
-          
-          {/* Clean Google Account Selector Button */}
+        <div className="mb-4">
           <button
             type="button"
             onClick={handleGoogleClick}
