@@ -51,5 +51,32 @@ def init_db():
                         conn.execute(text("ALTER TABLE users ADD COLUMN bio TEXT;"))
                     conn.commit()
                     print("Synced users table schema with profile columns.")
+        
+        # Ensure default evaluator account exists
+        seed_default_evaluator()
     except Exception as migr_err:
         print(f"Schema migration note: {migr_err}")
+
+def seed_default_evaluator():
+    """Seeds the standard hackathon evaluator account if it does not exist."""
+    try:
+        from app.db.models import User
+        from app.services.auth_service import hash_password
+        db = SessionLocal()
+        evaluator_email = "evaluator@hireshield.ai"
+        existing = db.query(User).filter(User.email == evaluator_email).first()
+        if not existing:
+            eval_user = User(
+                name="Security Evaluator",
+                email=evaluator_email,
+                hashed_password=hash_password("HireShield2026!"),
+                auth_provider="local",
+                location="San Francisco, CA",
+                bio="Official HireShield evaluator test account."
+            )
+            db.add(eval_user)
+            db.commit()
+            print("Seeded default demo account: evaluator@hireshield.ai")
+        db.close()
+    except Exception as e:
+        print(f"Evaluator seeding notice: {e}")

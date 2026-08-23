@@ -348,6 +348,7 @@ function Dashboard() {
                   <VerificationChecksCard
                     verifications={currentResult.verifications}
                     deductions={currentResult.deductions}
+                    entities={currentResult.entities}
                   />
 
                   <EvidenceTrailCard deductions={currentResult.deductions} />
@@ -358,9 +359,12 @@ function Dashboard() {
                   />
 
                   <JobTrustPassport
+                    passportData={currentResult}
                     passportId={currentResult.passportId}
                     company={currentResult.entities?.company || 'Verified Entity'}
                     trustScore={currentResult.trustScore}
+                    riskLevel={currentResult.riskLevel}
+                    riskColor={currentResult.riskColor}
                     verdict={currentResult.verdict}
                     timestamp={currentResult.timestamp}
                     entities={currentResult.entities}
@@ -377,15 +381,20 @@ function Dashboard() {
 
           {/* VIEW 4: SAFETY INSIGHTS */}
           {activeTab === 'insights' && (
-            <SafetyInsightsView onAuditOffer={() => setActiveTab('scanner')} />
+            <SafetyInsightsView 
+              onNavigateScanner={() => setActiveTab('scanner')}
+              onAuditOffer={() => setActiveTab('scanner')} 
+            />
           )}
 
           {/* VIEW 5: AUDIT HISTORY */}
           {activeTab === 'history' && (
             <HistoryTab
               history={history}
+              onSelectHistoryItem={handleSelectHistoryItem}
               onSelectHistory={handleSelectHistoryItem}
               onClearHistory={handleClearHistory}
+              onSwitchToScanner={() => setActiveTab('scanner')}
             />
           )}
 

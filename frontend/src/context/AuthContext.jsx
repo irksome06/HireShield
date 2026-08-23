@@ -65,19 +65,23 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email: email.trim(), password })
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.detail || 'Sign in failed. Please check your credentials.');
+        throw new Error(data.detail || 'Sign in failed. Please check your email and password.');
       }
 
       localStorage.setItem('hireshield_token', data.access_token);
       setToken(data.access_token);
       setUser(data.user);
-      return { success: true };
+      return { success: true, user: data.user };
     } catch (err) {
-      setAuthError(err.message);
-      return { success: false, error: err.message };
+      let friendlyError = err.message || 'Sign in failed.';
+      if (err.name === 'TypeError' || err.message === 'Failed to fetch' || err.message?.includes('NetworkError')) {
+        friendlyError = `Cannot connect to HireShield backend server at ${API_BASE_URL}. Please verify the backend service is running.`;
+      }
+      setAuthError(friendlyError);
+      return { success: false, error: friendlyError };
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +103,7 @@ export const AuthProvider = ({ children }) => {
         })
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(data.detail || 'Account registration failed.');
@@ -108,13 +112,43 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('hireshield_token', data.access_token);
       setToken(data.access_token);
       setUser(data.user);
-      return { success: true };
+      return { success: true, user: data.user };
     } catch (err) {
-      setAuthError(err.message);
-      return { success: false, error: err.message };
+      let friendlyError = err.message || 'Registration failed.';
+      if (err.name === 'TypeError' || err.message === 'Failed to fetch' || err.message?.includes('NetworkError')) {
+        friendlyError = `Cannot connect to HireShield backend server at ${API_BASE_URL}. Please verify the backend service is running.`;
+      }
+      setAuthError(friendlyError);
+      return { success: false, error: friendlyError };
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 1-Click Instant Demo / Evaluator Access
+  const loginAsDemo = async () => {
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/demo-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('hireshield_token', data.access_token);
+        setToken(data.access_token);
+        setUser(data.user);
+        return { success: true, user: data.user };
+      }
+    } catch (err) {
+      console.warn('Demo endpoint network fallback:', err);
+    }
+
+    // Fallback to standard email login with demo credentials
+    return await login('evaluator@hireshield.ai', 'HireShield2026!');
   };
 
   // Google OAuth Login
@@ -129,7 +163,7 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ credential })
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(data.detail || 'Google sign-in failed.');
@@ -138,10 +172,14 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('hireshield_token', data.access_token);
       setToken(data.access_token);
       setUser(data.user);
-      return { success: true };
+      return { success: true, user: data.user };
     } catch (err) {
-      setAuthError(err.message);
-      return { success: false, error: err.message };
+      let friendlyError = err.message || 'Google sign-in failed.';
+      if (err.name === 'TypeError' || err.message === 'Failed to fetch' || err.message?.includes('NetworkError')) {
+        friendlyError = `Cannot connect to HireShield backend server at ${API_BASE_URL}.`;
+      }
+      setAuthError(friendlyError);
+      return { success: false, error: friendlyError };
     } finally {
       setIsLoading(false);
     }
@@ -197,6 +235,7 @@ export const AuthProvider = ({ children }) => {
       authError,
       login,
       signup,
+      loginAsDemo,
       loginWithGoogle,
       logout,
       updateUser,

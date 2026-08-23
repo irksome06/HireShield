@@ -16,9 +16,11 @@ import {
 export const HistoryTab = ({ 
   history = [], 
   onSelectHistoryItem, 
+  onSelectHistory,
   onClearHistory,
   onSwitchToScanner 
 }) => {
+  const handleSelect = onSelectHistoryItem || onSelectHistory;
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRisk, setFilterRisk] = useState('all'); // 'all', 'high', 'suspicious', 'low'
 
@@ -299,7 +301,7 @@ export const HistoryTab = ({
 
                     <button
                       type="button"
-                      onClick={() => onSelectHistoryItem(item)}
+                      onClick={() => handleSelect && handleSelect(item)}
                       className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-all group-hover:border-cyan-500/50 cursor-pointer shrink-0"
                     >
                       <span>View Full Report</span>
