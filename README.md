@@ -172,25 +172,47 @@ HireShield executes a **5-stage multi-vector pipeline** whenever a job offer tex
 ```json
 {
   "passport_id": "HSP-2026-A89F",
-  "overall_score": 10,
-  "risk_tier": "Critical Threat",
+  "trust_score": 10,
+  "risk_level": "High",
+  "risk_color": "rose",
+  "verdict": "Critical Threat Detected",
+  "summary": "Message explicitly demands upfront hardware payment via unverified channels and utilizes an ephemeral high-risk domain.",
   "entities": {
     "company": "Stripe",
     "recruiter": "david@stripe-careers.top",
-    "payment_amount": "$350 via Zelle"
+    "email": "david@stripe-careers.top",
+    "domain": "stripe-careers.top",
+    "payment_amount": "$350 via Zelle",
+    "extraction_method": "Google Gemini 1.5 JSON"
   },
   "deductions": [
     {
+      "id": 1,
       "signal": "Upfront Payment / Equipment Fee Demand",
       "penalty": -40,
-      "severity": "Critical"
+      "severity": "Critical",
+      "description": "Message explicitly demands advance funds or non-reversible money transfers prior to employment."
     },
     {
+      "id": 2,
       "signal": "High-Risk Domain TLD & Spoofing Indicator",
       "penalty": -25,
-      "severity": "High"
+      "severity": "High",
+      "description": "Domain utilizes an extension heavily associated with recruitment phishing."
     }
-  ]
+  ],
+  "verifications": [
+    {
+      "name": "Domain Registry TLD Check",
+      "status": "Failed",
+      "detail": "Domain 'stripe-careers.top' uses '.top', a high-risk TLD frequently abused for recruitment phishing."
+    }
+  ],
+  "recommendations": [
+    "Do NOT send money, gift cards, or wire transfers for home office equipment.",
+    "Verify the job listing directly on the employer's official careers portal."
+  ],
+  "timestamp": "2026-08-23T15:00:00Z"
 }
 ```
 
