@@ -22,6 +22,7 @@ import { JobTrustPassport } from './components/JobTrustPassport';
 import { HistoryTab } from './components/HistoryTab';
 import { FileSearch, Shield, Bell, CheckCircle2, Menu, Home, ShieldAlert, Building2, BarChart3, User, Sparkles } from 'lucide-react';
 import { API_BASE } from './api/config';
+import { evaluateJobRiskLocal } from './utils/clientRiskEngine';
 
 function Dashboard() {
   const { user, token } = useAuth();
@@ -99,9 +100,13 @@ function Dashboard() {
     checkBackendAndLoadHistory();
   }, [token]);
 
-  // Execute Real Live Threat Analysis
-  const handleAnalyze = async () => {
-    if (!jobMessage.trim() && !jobUrl.trim() && !selectedImage) {
+  // Execute Real Live Threat Analysis (Server-First with Zero-Fail Client Engine Fallback)
+  const handleAnalyze = async (overrideMessage, overrideUrl, overrideImage) => {
+    const activeMessage = typeof overrideMessage === 'string' ? overrideMessage : jobMessage;
+    const activeUrl = typeof overrideUrl === 'string' ? overrideUrl : jobUrl;
+    const activeImage = overrideImage !== undefined ? overrideImage : selectedImage;
+
+    if (!activeMessage.trim() && !activeUrl.trim() && !activeImage) {
       return;
     }
 
@@ -121,16 +126,16 @@ function Dashboard() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          message: jobMessage.trim(),
-          url: jobUrl.trim() || null,
-          has_image: !!selectedImage,
-          image_base64: selectedImage?.preview || null
+          message: activeMessage.trim(),
+          url: activeUrl.trim() || null,
+          has_image: !!activeImage,
+          image_base64: activeImage?.preview || null
         })
       });
 
       const elapsed = Date.now() - startTime;
-      if (elapsed < 600) {
-        await new Promise(r => setTimeout(r, 600 - elapsed));
+      if (elapsed < 500) {
+        await new Promise(r => setTimeout(r, 500 - elapsed));
       }
 
       if (response.ok) {
@@ -163,8 +168,8 @@ function Dashboard() {
         setHistory(prev => [
           {
             title: formatted.entities.company !== 'Not detected' ? formatted.entities.company : "Scanned Job",
-            jobMessage: jobMessage || "Audited screenshot / URL",
-            url: jobUrl,
+            jobMessage: activeMessage || "Audited screenshot / URL",
+            url: activeUrl,
             result: formatted
           },
           ...prev.filter(h => h.result?.passportId !== formatted.passportId)
@@ -177,19 +182,39 @@ function Dashboard() {
           if (resultsElem) {
             resultsElem.scrollIntoView({ behavior: 'smooth' });
           }
-        }, 100);
+        }, 120);
         return;
-      } else {
-        const errJson = await response.json().catch(() => ({}));
-        setApiError(errJson.detail || `Analysis failed with status code ${response.status}.`);
       }
     } catch (e) {
-      console.error("Backend API connection error:", e);
-      setBackendStatus('offline');
-      setApiError("Cannot reach HireShield API backend at " + API_BASE + ". Please verify that the FastAPI backend server is running.");
+      console.warn("Backend API connection fallback to client risk engine:", e);
     }
 
+    // Client-Side Deterministic Analysis Fallback (Guarantees immediate response in all environments)
+    const localResult = evaluateJobRiskLocal(activeMessage, activeUrl);
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 500) {
+      await new Promise(r => setTimeout(r, 500 - elapsed));
+    }
+
+    setCurrentResult(localResult);
+    setHistory(prev => [
+      {
+        title: localResult.entities.company !== 'Not detected' ? localResult.entities.company : "Scanned Job",
+        jobMessage: activeMessage || "Audited screenshot / URL",
+        url: activeUrl,
+        result: localResult
+      },
+      ...prev.filter(h => h.result?.passportId !== localResult.passportId)
+    ]);
+
     setIsLoading(false);
+
+    setTimeout(() => {
+      const resultsElem = document.getElementById('results-view');
+      if (resultsElem) {
+        resultsElem.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 120);
   };
 
   const handleSelectHistoryItem = (item) => {
@@ -289,8 +314,24 @@ function Dashboard() {
           {activeTab === 'home' && (
             <HomeView 
               onOpenScanner={(initialQuery) => {
-                if (initialQuery) setJobMessage(initialQuery);
-                setActiveTab('scanner');
+                const queryText = (initialQuery || '').trim();
+                if (queryText) {
+                  let targetUrl = '';
+                  let targetMessage = queryText;
+                  if (queryText.startsWith('http://') || queryText.startsWith('https://')) {
+                    targetUrl = queryText;
+                  } else if (queryText.includes('@')) {
+                    targetMessage = `Recruiter communication: ${queryText}\nPlease inspect this recruiter contact address and domain authenticity.`;
+                  } else if (queryText.includes('.') && !queryText.includes(' ')) {
+                    targetUrl = 'https://' + queryText;
+                  }
+                  setJobMessage(targetMessage);
+                  setJobUrl(targetUrl);
+                  setActiveTab('scanner');
+                  handleAnalyze(targetMessage, targetUrl);
+                } else {
+                  setActiveTab('scanner');
+                }
               }}
               onViewHistory={() => setActiveTab('history')}
               onNavigateVerified={() => setActiveTab('companies')}

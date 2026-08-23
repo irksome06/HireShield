@@ -52,9 +52,15 @@ export default function AuthLandingPage() {
         setLocalError('Please enter your full name.');
         return;
       }
-      await signup(formData.name, formData.email, formData.password);
+      const res = await signup(formData.name, formData.email, formData.password);
+      if (!res.success && res.error) {
+        setLocalError(res.error);
+      }
     } else {
-      await login(formData.email, formData.password);
+      const res = await login(formData.email, formData.password);
+      if (!res.success && res.error) {
+        setLocalError(res.error);
+      }
     }
   };
 

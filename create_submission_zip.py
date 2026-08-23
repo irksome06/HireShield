@@ -19,7 +19,12 @@ def make_zip():
     
     exclude_files = {
         'HIRESHIELD_HACKATHON_SUBMISSION.zip',
-        '.DS_Store'
+        '.DS_Store',
+        '.env',
+        '.env.local',
+        '.env.production',
+        'hireshield.db',
+        'hireshield.db-journal'
     }
 
     print(f"Creating clean submission archive: {zip_path}")

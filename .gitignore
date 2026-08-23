@@ -4,7 +4,12 @@ dist/
 dist-ssr/
 *.local
 .env
-.env.local
+.env.*
+*.env
+backend/.env
+frontend/.env
+*.zip
+*.tar.gz
 
 # Python & Backend
 __pycache__/
