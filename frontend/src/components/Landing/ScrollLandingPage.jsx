@@ -106,7 +106,13 @@ export default function ScrollLandingPage() {
       {/* ---------------------------------------------------- */}
       {/* 3D INTERACTIVE CYBER LAPTOP BACKDROP RIG            */}
       {/* ---------------------------------------------------- */}
-      <div className="fixed inset-0 pointer-events-none z-10 flex items-center justify-center overflow-hidden opacity-90 transition-opacity duration-500">
+      <div 
+        className={`fixed inset-0 pointer-events-none z-10 flex items-center justify-center overflow-hidden transition-all duration-700 ${
+          activeScene === 4 || scrollProgress >= 0.78
+            ? 'opacity-0 scale-90 pointer-events-none'
+            : 'opacity-90 scale-100'
+        }`}
+      >
         <SceneLaptop3D scrollProgress={scrollProgress} mousePos={mousePos} />
       </div>
 
