@@ -27,7 +27,9 @@ import {
   Bookmark,
   X,
   Layers,
-  Eye
+  Eye,
+  Play,
+  Pause
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -43,12 +45,13 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
   // Selected Flashcard for Detailed Modal
   const [selectedCard, setSelectedCard] = useState(null);
 
-  // Carousel Active Index & Autoplay
+  // Carousel Active Index, Autoplay & Continuous Progress
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(true);
+  const [slideProgress, setSlideProgress] = useState(0);
   const touchStartX = useRef(null);
 
-  // Complete Flashcards Dataset with Rich Imagery & Real Content
+  // Complete Flashcards Dataset with Authentic Real-World Photography & Live Data
   const FLASHCARDS_DATA = [
     {
       id: 'card-1',
@@ -58,7 +61,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
       title: 'Google Summer & Fall SWE Internship 2026',
       company: 'Google LLC',
       domain: 'google.com',
-      image: '/images/flashcards/job_internship_drive.jpg',
+      image: 'https://images.unsplash.com/photo-1572021335469-31706a17aaef?w=1000&auto=format&fit=crop&q=80',
       applicationDates: 'Open Now • Deadline: April 15, 2026',
       target: 'B.Tech / M.S. Computer Science, Early Career Developers',
       summary: 'Official software engineering internship across Systems, Cloud Infrastructure, Android, and ML Research teams. Verified direct application portal.',
@@ -76,7 +79,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
       title: 'Fake Check & Upfront Equipment Fee Ring',
       company: 'Threat Vector: Impersonated Enterprise HR',
       domain: 'Targeting: Remote Candidates',
-      image: '/images/flashcards/scam_fake_check.jpg',
+      image: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=1000&auto=format&fit=crop&q=80',
       applicationDates: 'Active Threat Campaign • Feb 2026',
       target: 'Data Entry, Executive Assistants, Junior Designers',
       summary: 'Attackers send realistic PDF offers with fake $3,200 check advances. Victims are instructed to wire funds back to a "certified hardware vendor" before the check bounces.',
@@ -94,7 +97,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
       title: 'Microsoft Early Career & University Graduate Drive',
       company: 'Microsoft Corporation',
       domain: 'microsoft.com',
-      image: '/images/flashcards/job_internship_drive.jpg',
+      image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1000&auto=format&fit=crop&q=80',
       applicationDates: 'Rolling Admissions • Next Cutoff: March 31, 2026',
       target: 'Software Engineers, Cloud Solution Architects, AI Engineers',
       summary: 'Full-time hiring across Azure, Security Operations, and Microsoft 365. Direct verification with official Microsoft Outlook protection gateway.',
@@ -112,7 +115,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
       title: 'Telegram & WhatsApp Fast-Track Interview Trap',
       company: 'Threat Vector: Imposter Tech Recruiters',
       domain: 'Modus: Unmonitored Chat Rooms',
-      image: '/images/flashcards/scam_telegram_trap.jpg',
+      image: 'https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=1000&auto=format&fit=crop&q=80',
       applicationDates: 'Ongoing Phishing Wave • 2026',
       target: 'Frontend, React & Mobile Developers',
       summary: 'Unsolicited messages on LinkedIn/WhatsApp inviting candidates to text-only Telegram interviews with immediate same-day $85/hr offers without face-to-face verification.',
@@ -130,7 +133,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
       title: 'FBI & FTC Issue 2026 Warning on AI-Generated Offer Letters',
       company: 'Cyber Threat Intelligence Bulletin',
       domain: 'Global Telemetry',
-      image: '/images/flashcards/recruitment_news_bulletin.jpg',
+      image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1000&auto=format&fit=crop&q=80',
       applicationDates: 'Published: February 2026 • Live Bulletin',
       target: 'All Job Seekers & Recent Graduates',
       summary: 'Scammers are now using LLMs to synthesize authentic-looking corporate offer letters, NDAs, and employee handbooks complete with forged executive signatures.',
@@ -148,7 +151,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
       title: 'Spotting Typo-Squatted & High-Risk Recruiter TLDs',
       company: 'Domain Integrity Protocol',
       domain: 'Defense Guide',
-      image: '/images/flashcards/scam_domain_spoof.jpg',
+      image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1000&auto=format&fit=crop&q=80',
       applicationDates: 'Standard Operating Procedure',
       target: 'All Tech & Remote Job Applicants',
       summary: 'Attackers register lookalike domains like stripe-careers.top or google-jobs.click. Learn how HireShield cross-references authoritative DNS roots to catch spoofed senders.',
@@ -166,7 +169,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
       title: 'HireShield Zero-Trust Job Passport Standard',
       company: 'HireShield Cryptographic Verification',
       domain: 'hireshield.security',
-      image: '/images/flashcards/verified_job_passport.jpg',
+      image: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1000&auto=format&fit=crop&q=80',
       applicationDates: 'Active 2026 Security Specification',
       target: 'Verified Candidates & Hiring Teams',
       summary: 'Every audited job offer receives a tamper-evident SHA-256 digital certificate validating corporate sender authenticity, salary realism, and clean reputation.',
@@ -184,27 +187,41 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
     return card.type === activeCategory;
   });
 
-  // Autoplay Effect (Slides every 5 seconds unless hovered/paused)
+  // Automated Self-Swiping Engine with Real-Time Progress Bar
+  const DURATION_PER_SLIDE = 4000; // 4 seconds per card
+  const INTERVAL_STEP = 50; // Progress tick
+
   useEffect(() => {
-    if (isPaused || filteredCards.length <= 1) return;
+    if (!isAutoPlayEnabled || filteredCards.length <= 1) return;
 
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % filteredCards.length);
-    }, 5500);
+    setSlideProgress(0);
 
-    return () => clearInterval(timer);
-  }, [isPaused, filteredCards.length]);
+    const progressTimer = setInterval(() => {
+      setSlideProgress((prev) => {
+        if (prev >= 100) {
+          setCurrentIndex((curr) => (curr + 1) % filteredCards.length);
+          return 0;
+        }
+        return prev + (INTERVAL_STEP / DURATION_PER_SLIDE) * 100;
+      });
+    }, INTERVAL_STEP);
+
+    return () => clearInterval(progressTimer);
+  }, [currentIndex, isAutoPlayEnabled, filteredCards.length]);
 
   // Reset current index when category changes
   useEffect(() => {
     setCurrentIndex(0);
+    setSlideProgress(0);
   }, [activeCategory]);
 
   const handleNext = () => {
+    setSlideProgress(0);
     setCurrentIndex((prev) => (prev + 1) % filteredCards.length);
   };
 
   const handlePrev = () => {
+    setSlideProgress(0);
     setCurrentIndex((prev) => (prev - 1 + filteredCards.length) % filteredCards.length);
   };
 
@@ -299,7 +316,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* 2. DYNAMIC AUTO/MANUAL SWIPING FLASHCARDS SHOWCASE            */}
+      {/* 2. DYNAMIC AUTO-SWIPING FLASHCARDS SHOWCASE (REAL PHOTOS)     */}
       {/* ------------------------------------------------------------- */}
       <div className="space-y-4">
         
@@ -311,12 +328,36 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
               <span className="text-base font-extrabold tracking-tight">Recruitment Flashcards & Live Drives</span>
             </div>
             <p className="text-xs text-slate-400">
-              Verified 2026 application deadlines, threat warnings, and safety briefs. (Autoplays & Swipeable)
+              Verified 2026 application deadlines, threat warnings, and safety briefs. (Automated Live Deck)
             </p>
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
+          {/* Autoplay Toggle & Category Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+            
+            {/* Auto-Slide Status Indicator */}
+            <button
+              onClick={() => setIsAutoPlayEnabled(!isAutoPlayEnabled)}
+              className={`py-1.5 px-2.5 rounded-xl text-[11px] font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                isAutoPlayEnabled
+                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40 shadow-sm'
+                  : 'bg-slate-900/80 text-slate-400 border-slate-800'
+              }`}
+              title={isAutoPlayEnabled ? 'Auto-swipe is ACTIVE (4s interval)' : 'Auto-swipe is PAUSED'}
+            >
+              {isAutoPlayEnabled ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span>Auto-Swipe ON</span>
+                </>
+              ) : (
+                <>
+                  <Pause className="w-3 h-3 text-slate-400" />
+                  <span>Paused</span>
+                </>
+              )}
+            </button>
+
             {[
               { id: 'all', label: '🔥 All Cards' },
               { id: 'jobs', label: '🎓 2026 Internships' },
@@ -342,40 +383,49 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
         {/* The Swipeable / Auto-Swiping Flashcard Deck */}
         <div 
           className="relative rounded-3xl bg-slate-900/90 border border-slate-800 p-4 sm:p-6 backdrop-blur-2xl shadow-xl overflow-hidden group"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
+          {/* Continuous Auto-Swipe Progress Bar Line at Top */}
+          {isAutoPlayEnabled && (
+            <div className="absolute top-0 left-0 right-0 h-1 bg-slate-950">
+              <div 
+                className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 transition-all duration-75"
+                style={{ width: `${slideProgress}%` }}
+              />
+            </div>
+          )}
+
           {filteredCards.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
               
-              {/* Left Column: Rich Visual Image with Cyber Overlay */}
+              {/* Left Column: Authentic Real Photography Image */}
               <div className="lg:col-span-5 relative rounded-2xl overflow-hidden aspect-video lg:aspect-[4/3] bg-slate-950 border border-slate-800 shadow-lg group-hover:border-cyan-500/40 transition-colors">
                 <img 
                   src={filteredCards[currentIndex]?.image} 
                   alt={filteredCards[currentIndex]?.title}
+                  loading="lazy"
                   className="w-full h-full object-cover object-center transform group-hover:scale-105 transition-transform duration-700"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent pointer-events-none" />
 
                 {/* Badge Overlay */}
                 <div className="absolute top-3 left-3">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border shadow-md ${
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border shadow-md backdrop-blur-md ${
                     filteredCards[currentIndex]?.badgeColor === 'rose'
-                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                      ? 'bg-rose-950/80 text-rose-300 border-rose-500/50'
                       : filteredCards[currentIndex]?.badgeColor === 'emerald'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                      ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
                       : filteredCards[currentIndex]?.badgeColor === 'amber'
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                      : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                      ? 'bg-amber-950/80 text-amber-300 border-amber-500/50'
+                      : 'bg-cyan-950/80 text-cyan-300 border-cyan-500/50'
                   }`}>
                     {filteredCards[currentIndex]?.badge}
                   </span>
                 </div>
 
                 {/* Trust Score Tag */}
-                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-700 text-xs font-mono font-bold text-white shadow-md">
+                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/90 border border-slate-700 text-xs font-mono font-bold text-white shadow-md backdrop-blur-md">
                   <ShieldCheck className={`w-3.5 h-3.5 ${filteredCards[currentIndex]?.trustScore >= 80 ? 'text-emerald-400' : 'text-rose-400'}`} />
                   <span>Trust: {filteredCards[currentIndex]?.trustScore}/100</span>
                 </div>
@@ -390,7 +440,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
                       <Calendar className="w-3.5 h-3.5" />
                       <span>{filteredCards[currentIndex]?.applicationDates}</span>
                     </span>
-                    <span className="text-[10px] font-mono text-slate-500">
+                    <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded-md border border-slate-800">
                       Card {currentIndex + 1} of {filteredCards.length}
                     </span>
                   </div>
@@ -456,13 +506,16 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
                     )}
                   </div>
 
-                  {/* Manual Swipe / Carousel Arrows & Dots */}
+                  {/* Manual Navigation Controls */}
                   <div className="flex items-center gap-3 self-end sm:self-auto">
                     <div className="flex items-center gap-1">
                       {filteredCards.map((_, dotIdx) => (
                         <button
                           key={dotIdx}
-                          onClick={() => setCurrentIndex(dotIdx)}
+                          onClick={() => {
+                            setSlideProgress(0);
+                            setCurrentIndex(dotIdx);
+                          }}
                           className={`h-1.5 rounded-full transition-all cursor-pointer ${
                             dotIdx === currentIndex ? 'w-5 bg-cyan-400' : 'w-1.5 bg-slate-700 hover:bg-slate-500'
                           }`}
