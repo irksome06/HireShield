@@ -26,11 +26,15 @@ def evaluate_job_risk(
     deduction_id = 1
 
     # 1. UPFRONT PAYMENT / EQUIPMENT FEE (Severe critical signal: -40)
-    payment_regex = r'\b(?:advance fee|application fee|equipment fee|processing fee|registration fee|training fee|onboarding fee|pay upfront|purchase equipment|zelle|cashapp|venmo|usdt|gift card|wire transfer|crypto wallet|bitcoin)\b|\bfee\b(?!\s*back|\s*dback)'
-    has_payment_phrase = bool(re.search(payment_regex, text_lower)) or any(p in text_lower for p in ['reimbursed on your first paycheck', 'purchase home office', 'send $', 'pay $', 'security deposit'])
-    has_extracted_fee = entities.payment_amount != "None detected" and not "none" in entities.payment_amount.lower()
+    # Check for negations first (e.g. "no fee", "no payment required", "never ask for money")
+    is_negated_fee = bool(re.search(r'\b(?:no|never|zero|without|free of)\s+(?:any\s+)?(?:advance\s+|application\s+|equipment\s+|registration\s+|training\s+|onboarding\s+|hidden\s+|recruitment\s+|placement\s+)?(?:fee|fees|charge|charges|cost|costs|payment|payments|deposit)\b', text_lower))
 
-    if has_payment_phrase or has_extracted_fee:
+    payment_regex = r'\b(?:advance fee|application fee|equipment fee|processing fee|registration fee|training fee|onboarding fee|pay upfront|purchase equipment|wire\s+(?:the\s+)?(?:money|funds|\$|amount)|send\s+\$\d+|pay\s+\$\d+|deposit\s+(?:a\s+)?check\s+(?:and|to)\s+wire|zelle|cashapp|venmo|usdt|gift card|crypto wallet|bitcoin)\b'
+    has_explicit_payment = bool(re.search(payment_regex, text_lower)) and not is_negated_fee
+    has_check_phrase = any(p in text_lower for p in ['reimbursed on your first paycheck', 'purchase home office', 'deposit the check and wire', 'deposit check and send']) and not is_negated_fee
+    has_extracted_fee = entities.payment_amount != "None detected" and not "none" in entities.payment_amount.lower() and not is_negated_fee
+
+    if (has_explicit_payment or has_check_phrase or has_extracted_fee) and not is_negated_fee:
         penalty = -40
         score += penalty
         deductions.append(DeductionItem(
@@ -43,8 +47,10 @@ def evaluate_job_risk(
         deduction_id += 1
 
     # 2. SENSITIVE IDENTIFIERS / OTP / DATA HARVESTING (High risk: -25)
-    data_regex = r'\b(?:ssn|social security|otp|one-time password|routing number)\b'
-    if re.search(data_regex, text_lower) or any(term in text_lower for term in ['bank account details', 'passport copy', 'driver license']):
+    is_negated_data = bool(re.search(r'\b(?:never|do not|don\'t|will not|no)\s+(?:share|ask for|send|give|provide)\s+(?:your\s+)?(?:ssn|password|otp|banking|bank details)\b', text_lower))
+    data_regex = r'\b(?:ssn|social security number|one-time password|otp code|bank routing number)\b'
+    has_sensitive_data = bool(re.search(data_regex, text_lower)) or any(term in text_lower for term in ['bank account details', 'passport copy', 'driver license'])
+    if has_sensitive_data and not is_negated_data:
         penalty = -25
         score += penalty
         deductions.append(DeductionItem(

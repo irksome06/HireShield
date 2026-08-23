@@ -41,19 +41,22 @@ def extract_entities_rule_based(message: str, url: Optional[str] = None) -> Extr
     # 3. Domain extraction
     domain = extract_domain_from_url_or_text(url, text)
 
-    # 4. Payment / Fee extraction
+    # 4. Payment / Fee extraction (precise scam phrases, avoiding false positives like 'wireframes' or 'wireless')
     payment_patterns = [
-        r'(\$\s*\d+(?:\.\d{2})?\s*(?:via|for|fee|deposit|equipment|hardware|wire|zelle|crypto|usdt))',
-        r'((?:send|wire|pay|purchase|deposit)\s*\$\s*\d+)',
-        r'(\$\s*\d+\s*(?:advance|onboarding|training|background check)\s*fee)',
-        r'(Zelle|Wire|CashApp|Venmo|USDT|Crypto wallet|Bitcoin)'
+        r'(\$\s*\d+(?:\.\d{2})?\s*(?:via|for|in|as)\s*(?:fee|deposit|equipment|hardware|wire|zelle|crypto|usdt))',
+        r'((?:send|wire|pay|deposit)\s*\$\s*\d+)',
+        r'(\$\s*\d+\s*(?:advance|onboarding|training|background check|hardware|equipment)\s*fee)',
+        r'\b(Zelle|Wire transfer|CashApp|Venmo|USDT|Crypto wallet|Bitcoin|Gift card)\b'
     ]
     payment_amount = "None detected"
     for pat in payment_patterns:
         match = re.search(pat, text, re.IGNORECASE)
         if match:
-            payment_amount = match.group(0).strip()
-            break
+            start_pos = max(0, match.start() - 25)
+            context_before = text[start_pos:match.start()].lower()
+            if not re.search(r'\b(?:no|never|zero|without|free of)\s*$', context_before):
+                payment_amount = match.group(0).strip()
+                break
 
     # 5. Salary / Compensation extraction
     salary_match = re.search(r'(\$\s*\d+(?:,\d+)*(?:\.\d+)?\s*(?:\/|\s*per\s*)?(?:hr|hour|hr\.|day|week|month|year|annually|\+ equity)?)', text, re.IGNORECASE)

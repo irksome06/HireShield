@@ -42,10 +42,18 @@ export function extractEntitiesLocal(message, url) {
   // 3. Domain
   const domain = extractDomainFromUrlOrText(url, text);
 
-  // 4. Payment / Advance Fee
-  const paymentRegex = /(\$\s*\d+(?:\.\d{2})?\s*(?:via|for|fee|deposit|equipment|hardware|wire|zelle|crypto|usdt|check)|(?:send|wire|pay|purchase|deposit)\s*\$\s*\d+|\$\s*\d+\s*(?:advance|onboarding|training|background check)\s*fee|Zelle|Wire|CashApp|Venmo|USDT|Crypto wallet|Bitcoin)/i;
+  // 4. Payment / Advance Fee (precise scam phrases, avoiding false positives like 'wireframes' or 'wireless')
+  const paymentRegex = /(\$\s*\d+(?:\.\d{2})?\s*(?:via|for|in|as)\s*(?:fee|deposit|equipment|hardware|wire|zelle|crypto|usdt)|(?:send|wire|pay|deposit)\s*\$\s*\d+|\$\s*\d+\s*(?:advance|onboarding|training|background check|hardware|equipment)\s*fee|\b(?:Zelle|Wire transfer|CashApp|Venmo|USDT|Crypto wallet|Bitcoin|Gift card)\b)/i;
   const paymentMatch = text.match(paymentRegex);
-  const paymentAmount = paymentMatch ? paymentMatch[0].trim() : 'None detected';
+  let paymentAmount = 'None detected';
+  if (paymentMatch) {
+    const matchIndex = paymentMatch.index || 0;
+    const startPos = Math.max(0, matchIndex - 25);
+    const contextBefore = text.substring(startPos, matchIndex).toLowerCase();
+    if (!/\b(?:no|never|zero|without|free of)\s*$/.test(contextBefore)) {
+      paymentAmount = paymentMatch[0].trim();
+    }
+  }
 
   // 5. Salary
   const salaryMatch = text.match(/(\$\s*\d+(?:,\d+)*(?:\.\d+)?\s*(?:\/|\s*per\s*)?(?:hr|hour|hr\.|day|week|month|year|annually|\+ equity)?)/i);
@@ -211,11 +219,13 @@ export function evaluateJobRiskLocal(message, url) {
   let deductionId = 1;
 
   // 1. Advance Fee / Equipment Scam
-  const paymentRegex = /\b(?:advance fee|application fee|equipment fee|processing fee|registration fee|training fee|onboarding fee|pay upfront|purchase equipment|zelle|cashapp|venmo|usdt|gift card|wire transfer|crypto wallet|bitcoin)\b|\bfee\b(?!\s*back|\s*dback)/i;
-  const hasPaymentPhrase = paymentRegex.test(textLower) || textLower.includes('reimbursed on your first paycheck') || textLower.includes('purchase home office') || textLower.includes('send $') || textLower.includes('pay $');
-  const hasExtractedFee = entities.paymentAmount !== 'None detected';
+  const isNegatedFee = /\b(?:no|never|zero|without|free of)\s+(?:any\s+)?(?:advance\s+|application\s+|equipment\s+|registration\s+|training\s+|onboarding\s+|hidden\s+|recruitment\s+|placement\s+)?(?:fee|fees|charge|charges|cost|costs|payment|payments|deposit)\b/i.test(textLower);
+  const paymentRegex = /\b(?:advance fee|application fee|equipment fee|processing fee|registration fee|training fee|onboarding fee|pay upfront|purchase equipment|wire\s+(?:the\s+)?(?:money|funds|\$|amount)|send\s+\$\d+|pay\s+\$\d+|deposit\s+(?:a\s+)?check\s+(?:and|to)\s+wire|zelle|cashapp|venmo|usdt|gift card|crypto wallet|bitcoin)\b/i;
+  const hasPaymentPhrase = paymentRegex.test(textLower) && !isNegatedFee;
+  const hasCheckPhrase = (textLower.includes('reimbursed on your first paycheck') || textLower.includes('purchase home office') || textLower.includes('deposit the check and wire')) && !isNegatedFee;
+  const hasExtractedFee = entities.paymentAmount !== 'None detected' && !isNegatedFee;
 
-  if (hasPaymentPhrase || hasExtractedFee) {
+  if (hasPaymentPhrase || hasCheckPhrase || hasExtractedFee) {
     const penalty = -40;
     score += penalty;
     deductions.push({
@@ -228,8 +238,10 @@ export function evaluateJobRiskLocal(message, url) {
   }
 
   // 2. Sensitive Data / OTP
-  const dataRegex = /\b(?:ssn|social security|otp|one-time password|routing number)\b/i;
-  if (dataRegex.test(textLower) || textLower.includes('bank account details') || textLower.includes('passport copy')) {
+  const isNegatedData = /\b(?:never|do not|don\'t|will not|no)\s+(?:share|ask for|send|give|provide)\s+(?:your\s+)?(?:ssn|password|otp|banking|bank details)\b/i.test(textLower);
+  const dataRegex = /\b(?:ssn|social security number|one-time password|otp code|bank routing number)\b/i;
+  const hasSensitiveData = (dataRegex.test(textLower) || textLower.includes('bank account details') || textLower.includes('passport copy')) && !isNegatedData;
+  if (hasSensitiveData) {
     const penalty = -25;
     score += penalty;
     deductions.push({
