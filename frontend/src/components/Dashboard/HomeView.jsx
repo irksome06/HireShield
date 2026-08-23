@@ -476,10 +476,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
                       {filteredCards.map((_, dotIdx) => (
                         <button
                           key={dotIdx}
-                          onClick={() => {
-                            setSlideProgress(0);
-                            setCurrentIndex(dotIdx);
-                          }}
+                          onClick={() => setCurrentIndex(dotIdx)}
                           className={`h-1.5 rounded-full transition-all cursor-pointer ${
                             dotIdx === currentIndex ? 'w-5 bg-cyan-400' : 'w-1.5 bg-slate-700 hover:bg-slate-500'
                           }`}
@@ -521,9 +518,9 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* 3. SAFETY METRICS OVERVIEW CARDS                              */}
+      {/* 3. SAFETY METRICS OVERVIEW CARDS (2x2 on mobile, 4 on desktop)*/}
       {/* ------------------------------------------------------------- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         
         <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-md">
           <div className="flex items-center justify-between">
