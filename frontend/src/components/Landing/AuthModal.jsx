@@ -14,7 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { triggerGoogleOAuth, renderOfficialGoogleButton } from '../../utils/googleAuth';
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
-  const { login, signup, loginAsDemo, loginWithGoogle, authError, clearError, isLoading } = useAuth();
+  const { login, signup, loginWithGoogle, authError, clearError, isLoading } = useAuth();
   
   const [authMode, setAuthMode] = useState(initialMode);
   const [formData, setFormData] = useState({
@@ -25,7 +25,6 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   const googleBtnRef = useRef(null);
 
@@ -41,30 +40,6 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (localError) setLocalError('');
     if (authError) clearError();
-  };
-
-  const handleFillDemo = () => {
-    setFormData({
-      name: 'Security Evaluator',
-      email: 'evaluator@hireshield.ai',
-      password: 'HireShield2026!'
-    });
-    setLocalError('');
-    if (clearError) clearError();
-  };
-
-  const handleInstantDemo = async () => {
-    setIsDemoLoading(true);
-    setLocalError('');
-    clearError();
-
-    const res = await loginAsDemo();
-    setIsDemoLoading(false);
-    if (res.success) {
-      onClose();
-    } else if (res.error) {
-      setLocalError(res.error);
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -160,21 +135,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
           </div>
         </div>
 
-        {/* Instant Demo Access Button */}
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={handleInstantDemo}
-            disabled={isLoading || isDemoLoading || isGoogleLoading}
-            className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500/20 via-cyan-500/20 to-blue-500/20 hover:from-emerald-500/30 hover:to-blue-500/30 border border-emerald-500/40 hover:border-emerald-400 text-xs font-bold text-emerald-300 flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer group"
-          >
-            <span className="text-sm">⚡</span>
-            <span>{isDemoLoading ? 'Entering as Evaluator...' : 'Instant Demo Sign-In (1-Click Access)'}</span>
-          </button>
-        </div>
-
         {/* Tab Switcher */}
-        <div className="flex p-1 bg-slate-950/70 border border-slate-800 rounded-xl mb-4">
+        <div className="flex p-1 bg-slate-950/70 border border-slate-800 rounded-xl mb-5">
           <button
             type="button"
             onClick={() => toggleMode('signin')}
@@ -208,11 +170,11 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
         )}
 
         {/* Google Sign In Container */}
-        <div className="mb-3">
+        <div className="mb-4">
           <button
             type="button"
             onClick={handleGoogleClick}
-            disabled={isLoading || isGoogleLoading || isDemoLoading}
+            disabled={isLoading || isGoogleLoading}
             className="w-full py-2.5 px-4 rounded-xl bg-slate-950/90 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2.5 transition-all hover:border-cyan-500/50 cursor-pointer group shadow-sm disabled:opacity-60"
           >
             <svg className="w-4 h-4 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
@@ -229,7 +191,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
         <div className="relative flex items-center justify-center mb-4">
           <div className="w-full border-t border-slate-800" />
           <span className="absolute bg-[#0d1322] px-2.5 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-            or with email & password
+            or email
           </span>
         </div>
 
@@ -278,17 +240,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
               <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                 Password
               </label>
-              {authMode === 'signin' ? (
-                <button
-                  type="button"
-                  onClick={handleFillDemo}
-                  className="text-[10px] text-cyan-400 hover:text-cyan-300 underline cursor-pointer"
-                >
-                  Fill Demo Credentials
-                </button>
-              ) : (
-                <span className="text-[10px] text-slate-500">Min. 6 chars</span>
-              )}
+              <span className="text-[10px] text-slate-500">Min. 6 chars</span>
             </div>
             <div className="relative">
               <Lock className="w-3.5 h-3.5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />

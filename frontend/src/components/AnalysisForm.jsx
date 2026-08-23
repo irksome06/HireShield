@@ -9,8 +9,6 @@ import {
   ArrowRight,
   Sparkles
 } from 'lucide-react';
-import { SAMPLE_PROMPTS } from '../data/samplePrompts';
-
 export const AnalysisForm = ({ 
   jobMessage, 
   setJobMessage, 
@@ -62,45 +60,22 @@ export const AnalysisForm = ({
     setSelectedImage(null);
   };
 
-  const handleLoadSample = (sample) => {
-    setJobMessage(sample.message);
-    setJobUrl(sample.url || '');
-    setSelectedImage(null);
-  };
-
   const hasContent = !!(jobMessage && jobMessage.trim()) || !!(jobUrl && jobUrl.trim()) || !!selectedImage;
 
   return (
     <div className="bg-[#111827]/95 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl backdrop-blur-md">
       
-      {/* Header & Quick Example Presets */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 pb-4 border-b border-slate-800/80">
-        <div>
-          <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <span className="p-1 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-              <ShieldCheck className="w-4 h-4" />
-            </span>
-            <span>Check a Job Offer</span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Paste the job text, enter a link, or upload an image to run a live threat analysis.
-          </p>
-        </div>
-
-        {/* Friendly Preset Chips */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-slate-400 mr-0.5">Try an example:</span>
-          {SAMPLE_PROMPTS.map((prompt) => (
-            <button
-              key={prompt.id}
-              type="button"
-              onClick={() => handleLoadSample(prompt)}
-              className="text-xs px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all hover:border-cyan-500/50 cursor-pointer"
-            >
-              {prompt.label}
-            </button>
-          ))}
-        </div>
+      {/* Header */}
+      <div className="pb-4 border-b border-slate-800/80">
+        <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+          <span className="p-1 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+            <ShieldCheck className="w-4 h-4" />
+          </span>
+          <span>Check a Job Offer</span>
+        </h2>
+        <p className="text-xs text-slate-400 mt-0.5">
+          Paste the job text, enter a link, or upload an image to run a live threat analysis.
+        </p>
       </div>
 
       {/* Error notification banner if API failed */}

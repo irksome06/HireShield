@@ -15,41 +15,18 @@ import { useAuth } from '../../../context/AuthContext';
 import { triggerGoogleOAuth, renderOfficialGoogleButton } from '../../../utils/googleAuth';
 
 export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
-  const { login, signup, loginAsDemo, loginWithGoogle, authError, clearError, isLoading } = useAuth();
+  const { login, signup, loginWithGoogle, authError, clearError, isLoading } = useAuth();
 
   const [authMode, setAuthMode] = useState('signup');
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (localError) setLocalError('');
     if (authError) clearError();
-  };
-
-  const handleFillDemo = () => {
-    setFormData({
-      name: 'Security Evaluator',
-      email: 'evaluator@hireshield.ai',
-      password: 'HireShield2026!'
-    });
-    setLocalError('');
-    if (clearError) clearError();
-  };
-
-  const handleInstantDemo = async () => {
-    setIsDemoLoading(true);
-    setLocalError('');
-    clearError();
-
-    const res = await loginAsDemo();
-    setIsDemoLoading(false);
-    if (!res.success && res.error) {
-      setLocalError(res.error);
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -131,21 +108,8 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
         {/* Embedded Glassmorphism Auth Console */}
         <div className="rounded-3xl bg-slate-900/90 border border-slate-700/80 p-7 backdrop-blur-2xl shadow-2xl shadow-cyan-950/40 cyber-glow">
           
-          {/* Instant Demo Access Button */}
-          <div className="mb-4">
-            <button
-              type="button"
-              onClick={handleInstantDemo}
-              disabled={isLoading || isDemoLoading || isGoogleLoading}
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500/20 via-cyan-500/20 to-blue-500/20 hover:from-emerald-500/30 hover:to-blue-500/30 border border-emerald-500/40 hover:border-emerald-400 text-xs font-bold text-emerald-300 flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer group"
-            >
-              <span className="text-sm">⚡</span>
-              <span>{isDemoLoading ? 'Entering as Evaluator...' : 'Instant Demo Sign-In (1-Click Access)'}</span>
-            </button>
-          </div>
-
           {/* Tab Switcher */}
-          <div className="flex p-1 bg-slate-950/70 border border-slate-800 rounded-xl mb-4">
+          <div className="flex p-1 bg-slate-950/70 border border-slate-800 rounded-xl mb-5">
             <button
               type="button"
               onClick={() => { setAuthMode('signup'); setLocalError(''); }}
@@ -179,11 +143,11 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
           )}
 
           {/* Google Sign-In Container */}
-          <div className="mb-3">
+          <div className="mb-4">
             <button
               type="button"
               onClick={handleGoogleClick}
-              disabled={isLoading || isGoogleLoading || isDemoLoading}
+              disabled={isLoading || isGoogleLoading}
               className="w-full py-2.5 px-4 rounded-xl bg-slate-950/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2.5 transition-all hover:border-cyan-500/50 cursor-pointer group disabled:opacity-60"
             >
               <svg className="w-4 h-4 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
@@ -199,7 +163,7 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
           <div className="relative flex items-center justify-center mb-4">
             <div className="w-full border-t border-slate-800" />
             <span className="absolute bg-[#0d1322] px-2.5 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
-              or with email & password
+              or email
             </span>
           </div>
 
@@ -248,17 +212,7 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                   Password
                 </label>
-                {authMode === 'signin' ? (
-                  <button
-                    type="button"
-                    onClick={handleFillDemo}
-                    className="text-[10px] text-cyan-400 hover:text-cyan-300 underline cursor-pointer font-mono"
-                  >
-                    Fill Demo Credentials
-                  </button>
-                ) : (
-                  <span className="text-[10px] text-slate-500 font-mono">Min. 6 chars</span>
-                )}
+                <span className="text-[10px] text-slate-500 font-mono">Min. 6 chars</span>
               </div>
               <div className="relative">
                 <Lock className="w-3.5 h-3.5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -283,7 +237,7 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
 
             <button
               type="submit"
-              disabled={isLoading || isGoogleLoading || isDemoLoading}
+              disabled={isLoading || isGoogleLoading}
               className="w-full mt-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 transition-all active:scale-[0.99] disabled:opacity-60 cursor-pointer"
             >
               {isLoading ? (

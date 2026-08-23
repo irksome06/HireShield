@@ -104,36 +104,6 @@ async def login(request: UserLoginRequest, db: Session = Depends(get_db)):
         user=format_user_response(user)
     )
 
-@router.post("/demo-login", response_model=AuthResponse)
-async def demo_login(db: Session = Depends(get_db)):
-    """Instant 1-click demo access for evaluators and guest testing."""
-    evaluator_email = "evaluator@hireshield.ai"
-    user = db.query(User).filter(User.email == evaluator_email).first()
-    if not user:
-        user = User(
-            name="Security Evaluator",
-            email=evaluator_email,
-            hashed_password=hash_password("HireShield2026!"),
-            auth_provider="local",
-            location="San Francisco, CA",
-            bio="Official HireShield evaluator test account."
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-    token = create_access_token({
-        "sub": str(user.id),
-        "email": user.email,
-        "name": user.name
-    })
-
-    return AuthResponse(
-        access_token=token,
-        token_type="bearer",
-        user=format_user_response(user)
-    )
-
 @router.post("/google", response_model=AuthResponse)
 async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db)):
     """Authenticates or creates a user account via verified Google OAuth ID Token."""

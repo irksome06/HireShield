@@ -125,32 +125,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 1-Click Instant Demo / Evaluator Access
-  const loginAsDemo = async () => {
-    setIsLoading(true);
-    setAuthError(null);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/demo-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('hireshield_token', data.access_token);
-        setToken(data.access_token);
-        setUser(data.user);
-        return { success: true, user: data.user };
-      }
-    } catch (err) {
-      console.warn('Demo endpoint network fallback:', err);
-    }
-
-    // Fallback to standard email login with demo credentials
-    return await login('evaluator@hireshield.ai', 'HireShield2026!');
-  };
-
   // Google OAuth Login
   const loginWithGoogle = async (credential) => {
     setIsLoading(true);
@@ -235,7 +209,6 @@ export const AuthProvider = ({ children }) => {
       authError,
       login,
       signup,
-      loginAsDemo,
       loginWithGoogle,
       logout,
       updateUser,
