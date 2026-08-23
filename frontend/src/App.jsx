@@ -21,8 +21,7 @@ import { SafetyRecommendationsCard } from './components/SafetyRecommendationsCar
 import { JobTrustPassport } from './components/JobTrustPassport';
 import { HistoryTab } from './components/HistoryTab';
 import { FileSearch, Shield, Bell, CheckCircle2 } from 'lucide-react';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+import { API_BASE } from './api/config';
 
 function Dashboard() {
   const { user, token } = useAuth();

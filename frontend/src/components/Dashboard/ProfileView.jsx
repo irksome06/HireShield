@@ -4,24 +4,19 @@ import {
   Mail, 
   Phone, 
   MapPin, 
-  FileText, 
-  ShieldCheck, 
-  Key, 
-  Calendar, 
-  CheckCircle2, 
-  LogOut, 
   Camera, 
-  Lock, 
-  AlertCircle, 
-  Edit3, 
   Save, 
-  X,
-  Sparkles,
-  Check
+  ShieldCheck, 
+  KeyRound, 
+  Lock, 
+  CheckCircle2, 
+  AlertCircle,
+  Clock,
+  Award,
+  Sparkles
 } from 'lucide-react';
+import { API_BASE } from '../../api/config';
 import { useAuth } from '../../context/AuthContext';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 const AVATAR_PRESETS = [
   "https://api.dicebear.com/7.x/bottts/svg?seed=cyber-shield",

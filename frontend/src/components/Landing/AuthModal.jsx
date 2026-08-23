@@ -120,15 +120,24 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
   };
 
   const handleGoogleButtonClick = () => {
+    let gsiTriggered = false;
     if (googleClientId && window.google?.accounts?.id) {
       try {
-        window.google.accounts.id.prompt();
-        return;
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
+            setShowGooglePicker(true);
+          }
+        });
+        gsiTriggered = true;
       } catch (e) {
-        // Fallback to picker modal
+        console.warn('Google One-Tap notice:', e);
       }
     }
-    setShowGooglePicker(true);
+    
+    // If not using GSI or GSI failed to prompt immediately, show the picker modal
+    setTimeout(() => {
+      setShowGooglePicker(true);
+    }, gsiTriggered ? 300 : 0);
   };
 
   const triggerGoogleLogin = async (name, email, picture) => {

@@ -1,26 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BarChart3, 
-  AlertTriangle, 
-  ShieldCheck, 
+  ShieldAlert, 
+  ExternalLink, 
+  Search, 
   TrendingUp, 
   CheckCircle2, 
-  ShieldAlert, 
-  RefreshCw, 
-  Search, 
+  AlertTriangle, 
   Globe, 
+  Activity, 
+  RefreshCw, 
   Lock, 
   Cpu, 
-  AlertCircle, 
-  ExternalLink,
-  Sparkles,
-  ArrowRight,
-  Radio,
-  Clock,
-  Layers
+  Info,
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+import { API_BASE } from '../../api/config';
 
 export default function SafetyInsightsView({ onNavigateScanner }) {
   const [data, setData] = useState(null);

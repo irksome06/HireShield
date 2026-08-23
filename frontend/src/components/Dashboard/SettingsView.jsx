@@ -23,10 +23,9 @@ import {
   Send,
   X
 } from 'lucide-react';
+import { API_BASE } from '../../api/config';
 import { useAuth } from '../../context/AuthContext';
 import { usePreferences } from '../../context/PreferencesContext';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export default function SettingsView() {
   const { user, token } = useAuth();

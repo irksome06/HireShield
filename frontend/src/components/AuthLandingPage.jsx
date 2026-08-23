@@ -115,15 +115,24 @@ export default function AuthLandingPage() {
   };
 
   const handleGoogleButtonClick = () => {
+    let gsiTriggered = false;
     if (googleClientId && window.google?.accounts?.id) {
       try {
-        window.google.accounts.id.prompt();
-        return;
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
+            setShowGoogleModal(true);
+          }
+        });
+        gsiTriggered = true;
       } catch (e) {
-        // Fallback to modal
+        console.warn('Google One-Tap notice:', e);
       }
     }
-    setShowGoogleModal(true);
+    
+    // Fallback to picker modal
+    setTimeout(() => {
+      setShowGoogleModal(true);
+    }, gsiTriggered ? 300 : 0);
   };
 
   const triggerGoogleLogin = async (name, email, picture) => {
