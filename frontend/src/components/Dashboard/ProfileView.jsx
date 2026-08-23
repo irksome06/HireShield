@@ -8,12 +8,19 @@ import {
   Save, 
   ShieldCheck, 
   KeyRound, 
+  Key,
   Lock, 
   CheckCircle2, 
   AlertCircle,
   Clock,
   Award,
-  Sparkles
+  Sparkles,
+  Edit3,
+  X,
+  Check,
+  Calendar,
+  FileText,
+  LogOut
 } from 'lucide-react';
 import { API_BASE } from '../../api/config';
 import { useAuth } from '../../context/AuthContext';

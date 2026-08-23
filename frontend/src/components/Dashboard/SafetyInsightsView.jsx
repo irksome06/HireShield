@@ -6,6 +6,7 @@ import {
   TrendingUp, 
   CheckCircle2, 
   AlertTriangle, 
+  AlertCircle,
   Globe, 
   Activity, 
   RefreshCw, 
@@ -13,7 +14,11 @@ import {
   Cpu, 
   Info,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Radio,
+  Clock,
+  ArrowRight,
+  Layers
 } from 'lucide-react';
 import { API_BASE } from '../../api/config';
 
