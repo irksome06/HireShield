@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { triggerGoogleOAuth, renderOfficialGoogleButton } from '../../utils/googleAuth';
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
   const { login, signup, loginWithGoogle, authError, clearError, isLoading } = useAuth();
@@ -25,7 +26,6 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
   const [localError, setLocalError] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
   const googleBtnRef = useRef(null);
 
   useEffect(() => {
@@ -34,59 +34,28 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
     if (clearError) clearError();
   }, [initialMode, isOpen]);
 
-  // Initialize official Google Identity Services
+  // Render official Google button when modal opens
   useEffect(() => {
-    if (!googleClientId || !isOpen) return;
+    if (!isOpen) return;
 
-    const initGsi = () => {
-      if (window.google?.accounts?.id) {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: googleClientId,
-            callback: async (response) => {
-              if (response.credential) {
-                setIsGoogleLoading(true);
-                setLocalError('');
-                const res = await loginWithGoogle(response.credential);
-                setIsGoogleLoading(false);
-                if (res.success) {
-                  onClose();
-                } else if (res.error) {
-                  setLocalError(res.error);
-                }
-              }
-            },
-            auto_select: false
-          });
-
-          if (googleBtnRef.current) {
-            googleBtnRef.current.innerHTML = '';
-            window.google.accounts.id.renderButton(googleBtnRef.current, {
-              theme: 'filled_black',
-              size: 'large',
-              shape: 'rectangular',
-              width: 340,
-              text: authMode === 'signup' ? 'signup_with' : 'signin_with'
-            });
+    const container = googleBtnRef.current;
+    if (container) {
+      renderOfficialGoogleButton(container, {
+        authMode,
+        onCredential: async (credential) => {
+          setIsGoogleLoading(true);
+          setLocalError('');
+          const res = await loginWithGoogle(credential);
+          setIsGoogleLoading(false);
+          if (res.success) {
+            onClose();
+          } else if (res.error) {
+            setLocalError(res.error);
           }
-        } catch (err) {
-          console.warn('Google Identity initialization notice:', err);
         }
-      }
-    };
-
-    if (window.google?.accounts?.id) {
-      initGsi();
-    } else {
-      const timer = setInterval(() => {
-        if (window.google?.accounts?.id) {
-          clearInterval(timer);
-          initGsi();
-        }
-      }, 150);
-      return () => clearInterval(timer);
+      });
     }
-  }, [googleClientId, authMode, isOpen]);
+  }, [isOpen, authMode]);
 
   if (!isOpen) return null;
 
@@ -124,59 +93,27 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
     }
   };
 
-  // Launch official Google OAuth2 popup client
-  const handleGoogleButtonClick = () => {
+  // Interactive Google Sign-In Popup
+  const handleGoogleClick = () => {
     setLocalError('');
     clearError();
 
-    if (googleClientId && window.google?.accounts?.oauth2) {
-      try {
-        setIsGoogleLoading(true);
-        const client = window.google.accounts.oauth2.initTokenClient({
-          client_id: googleClientId,
-          scope: 'email profile openid',
-          callback: async (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token) {
-              const res = await loginWithGoogle(tokenResponse.access_token);
-              setIsGoogleLoading(false);
-              if (res.success) {
-                onClose();
-              } else if (res.error) {
-                setLocalError(res.error);
-              }
-            } else if (tokenResponse && tokenResponse.error) {
-              setIsGoogleLoading(false);
-              setLocalError(`Google sign-in error: ${tokenResponse.error_description || tokenResponse.error}`);
-            }
-          },
-          error_callback: (err) => {
-            setIsGoogleLoading(false);
-            setLocalError('Google authorization window was closed or blocked. Please allow popups.');
-          }
-        });
-        client.requestAccessToken({ prompt: 'select_account' });
-        return;
-      } catch (err) {
+    triggerGoogleOAuth({
+      onStart: () => setIsGoogleLoading(true),
+      onToken: async (token) => {
+        const res = await loginWithGoogle(token);
         setIsGoogleLoading(false);
-        console.warn('OAuth2 TokenClient init error:', err);
+        if (res.success) {
+          onClose();
+        } else if (res.error) {
+          setLocalError(res.error);
+        }
+      },
+      onError: (errorMessage) => {
+        setIsGoogleLoading(false);
+        setLocalError(errorMessage);
       }
-    }
-
-    // Try Google Identity prompt if TokenClient not ready
-    if (googleClientId && window.google?.accounts?.id) {
-      try {
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed()) {
-            setLocalError('Google One-Tap is not displayed. Please check popup permissions or use Email.');
-          }
-        });
-        return;
-      } catch (e) {
-        console.warn('Google prompt notice:', e);
-      }
-    }
-
-    setLocalError('Connecting to Google Identity Services... Please try again in a moment.');
+    });
   };
 
   const toggleMode = (mode) => {
@@ -247,15 +184,17 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
           </div>
         )}
 
-        {/* Official Google Sign In */}
-        <div className="mb-4 flex flex-col items-center justify-center">
-          <div ref={googleBtnRef} className="w-full flex justify-center empty:hidden mb-2" />
+        {/* Official Google Sign In Container */}
+        <div className="mb-4 flex flex-col items-center justify-center gap-2">
+          {/* Official GSI Rendered Button */}
+          <div ref={googleBtnRef} className="w-full flex justify-center empty:hidden" />
           
+          {/* Direct Interactive Popup Fallback Button */}
           <button
             type="button"
             disabled={isGoogleLoading || isLoading}
-            onClick={handleGoogleButtonClick}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-950/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2.5 transition-all hover:border-cyan-500/50 cursor-pointer disabled:opacity-60 group"
+            onClick={handleGoogleClick}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-950/90 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2.5 transition-all hover:border-cyan-500/50 cursor-pointer disabled:opacity-60 group shadow-sm"
           >
             {isGoogleLoading ? (
               <div className="flex items-center gap-2">
@@ -270,7 +209,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
-                <span>Continue with Google</span>
+                <span>Continue with Google (Popup)</span>
               </>
             )}
           </button>

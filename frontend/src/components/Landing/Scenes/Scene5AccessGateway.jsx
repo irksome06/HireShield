@@ -12,6 +12,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { triggerGoogleOAuth, renderOfficialGoogleButton } from '../../../utils/googleAuth';
 
 export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
   const { login, signup, loginWithGoogle, authError, clearError, isLoading } = useAuth();
@@ -22,58 +23,26 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
   const [localError, setLocalError] = useState('');
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
   const googleBtnRef = useRef(null);
 
-  // Initialize official Google Identity Services
+  // Render official Google button
   useEffect(() => {
-    if (!googleClientId) return;
-
-    const initGsi = () => {
-      if (window.google?.accounts?.id && googleBtnRef.current) {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: googleClientId,
-            callback: async (response) => {
-              if (response.credential) {
-                setIsGoogleLoading(true);
-                setLocalError('');
-                const res = await loginWithGoogle(response.credential);
-                setIsGoogleLoading(false);
-                if (!res.success && res.error) {
-                  setLocalError(res.error);
-                }
-              }
-            },
-            auto_select: false
-          });
-
-          googleBtnRef.current.innerHTML = '';
-          window.google.accounts.id.renderButton(googleBtnRef.current, {
-            theme: 'filled_black',
-            size: 'large',
-            shape: 'rectangular',
-            width: 360,
-            text: authMode === 'signup' ? 'signup_with' : 'signin_with'
-          });
-        } catch (err) {
-          console.warn('GSI notice:', err);
+    const container = googleBtnRef.current;
+    if (container) {
+      renderOfficialGoogleButton(container, {
+        authMode,
+        onCredential: async (credential) => {
+          setIsGoogleLoading(true);
+          setLocalError('');
+          const res = await loginWithGoogle(credential);
+          setIsGoogleLoading(false);
+          if (!res.success && res.error) {
+            setLocalError(res.error);
+          }
         }
-      }
-    };
-
-    if (window.google?.accounts?.id) {
-      initGsi();
-    } else {
-      const timer = setInterval(() => {
-        if (window.google?.accounts?.id) {
-          clearInterval(timer);
-          initGsi();
-        }
-      }, 150);
-      return () => clearInterval(timer);
+      });
     }
-  }, [googleClientId, authMode]);
+  }, [authMode]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -111,51 +80,20 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
     setLocalError('');
     clearError();
 
-    if (googleClientId && window.google?.accounts?.oauth2) {
-      try {
-        setIsGoogleLoading(true);
-        const client = window.google.accounts.oauth2.initTokenClient({
-          client_id: googleClientId,
-          scope: 'email profile openid',
-          callback: async (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token) {
-              const res = await loginWithGoogle(tokenResponse.access_token);
-              setIsGoogleLoading(false);
-              if (!res.success && res.error) {
-                setLocalError(res.error);
-              }
-            } else if (tokenResponse && tokenResponse.error) {
-              setIsGoogleLoading(false);
-              setLocalError(`Google sign-in error: ${tokenResponse.error_description || tokenResponse.error}`);
-            }
-          },
-          error_callback: (err) => {
-            setIsGoogleLoading(false);
-            setLocalError('Google authorization window was closed or blocked.');
-          }
-        });
-        client.requestAccessToken({ prompt: 'select_account' });
-        return;
-      } catch (err) {
+    triggerGoogleOAuth({
+      onStart: () => setIsGoogleLoading(true),
+      onToken: async (token) => {
+        const res = await loginWithGoogle(token);
         setIsGoogleLoading(false);
-        console.warn('OAuth2 TokenClient notice:', err);
+        if (!res.success && res.error) {
+          setLocalError(res.error);
+        }
+      },
+      onError: (errorMessage) => {
+        setIsGoogleLoading(false);
+        setLocalError(errorMessage);
       }
-    }
-
-    if (googleClientId && window.google?.accounts?.id) {
-      try {
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed()) {
-            setLocalError('Google One-Tap is not displayed. Please check popup permissions or use Email.');
-          }
-        });
-        return;
-      } catch (e) {
-        console.warn('Google One-Tap notice:', e);
-      }
-    }
-
-    setLocalError('Connecting to Google Identity Services... Please try again in a moment.');
+    });
   };
 
   return (
@@ -219,15 +157,15 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
             </div>
           )}
 
-          {/* Official Google Button */}
-          <div className="mb-4 flex flex-col items-center justify-center">
-            <div ref={googleBtnRef} className="w-full flex justify-center empty:hidden mb-2" />
+          {/* Google Sign-In Container */}
+          <div className="mb-4 flex flex-col items-center justify-center gap-2">
+            <div ref={googleBtnRef} className="w-full flex justify-center empty:hidden" />
             
             <button
               type="button"
               disabled={isGoogleLoading || isLoading}
               onClick={handleGoogleClick}
-              className="w-full py-2.5 px-4 rounded-xl bg-slate-950/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2.5 transition-all hover:border-cyan-500/50 cursor-pointer disabled:opacity-60 group"
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-950/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2.5 transition-all hover:border-cyan-500/50 cursor-pointer disabled:opacity-60 group shadow-sm"
             >
               {isGoogleLoading ? (
                 <div className="flex items-center gap-2">
