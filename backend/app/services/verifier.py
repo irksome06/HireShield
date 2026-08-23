@@ -146,7 +146,8 @@ def verify_safe_browsing(url: Optional[str], domain: str) -> VerificationItem:
 
 def verify_whois_record(domain: str) -> VerificationItem:
     """
-    Checks WHOIS registration age using python-whois if available.
+    Checks WHOIS / RDAP registration age using ICANN RDAP over HTTPS,
+    with python-whois and structural reputation fallbacks.
     """
     if not domain or domain == "None detected" or domain in FREE_EMAIL_DOMAINS:
         return VerificationItem(
@@ -155,9 +156,53 @@ def verify_whois_record(domain: str) -> VerificationItem:
             detail="No specific corporate domain available for WHOIS evaluation."
         )
 
+    # 1. Try modern ICANN RDAP protocol over HTTPS (fast, standardized, port 443)
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) HireShield/2.0"}
+        rdap_url = f"https://rdap.org/domain/{domain.strip().lower()}"
+        res = requests.get(rdap_url, headers=headers, timeout=2.5)
+        if res.status_code == 200:
+            rdap_data = res.json()
+            events = rdap_data.get("events", [])
+            reg_date_str = None
+            for ev in events:
+                if ev.get("eventAction") in ("registration", "transfer"):
+                    reg_date_str = ev.get("eventDate")
+                    break
+            
+            if reg_date_str:
+                # Parse ISO date string
+                cleaned_date_str = reg_date_str.replace("Z", "+00:00")
+                creation_date = datetime.datetime.fromisoformat(cleaned_date_str)
+                now = datetime.datetime.now(creation_date.tzinfo or datetime.timezone.utc)
+                age_days = (now - creation_date).days
+                
+                if age_days < 30:
+                    return VerificationItem(
+                        name="Domain WHOIS Intelligence",
+                        status="Failed",
+                        detail=f"Domain '{domain}' registered only {age_days} days ago ({creation_date.strftime('%Y-%m-%d')}). High risk for disposable fraud."
+                    )
+                elif age_days < 180:
+                    return VerificationItem(
+                        name="Domain WHOIS Intelligence",
+                        status="Warning",
+                        detail=f"Domain '{domain}' is relatively new ({age_days} days old, registered {creation_date.strftime('%Y-%m-%d')})."
+                    )
+                else:
+                    years = max(1, age_days // 365)
+                    return VerificationItem(
+                        name="Domain WHOIS Intelligence",
+                        status="Passed",
+                        detail=f"Domain '{domain}' is established ({years}+ years old, registered {creation_date.strftime('%Y-%m-%d')})."
+                    )
+    except Exception:
+        pass
+
+    # 2. Try legacy python-whois if RDAP didn't resolve
     try:
         import whois
-        socket.setdefaulttimeout(3.0)
+        socket.setdefaulttimeout(2.0)
         w = whois.whois(domain)
         creation_date = w.creation_date
         if isinstance(creation_date, list):
@@ -179,7 +224,7 @@ def verify_whois_record(domain: str) -> VerificationItem:
                     detail=f"Domain '{domain}' is relatively new ({age_days} days old, registered {creation_date.strftime('%Y-%m-%d')})."
                 )
             else:
-                years = age_days // 365
+                years = max(1, age_days // 365)
                 return VerificationItem(
                     name="Domain WHOIS Intelligence",
                     status="Passed",

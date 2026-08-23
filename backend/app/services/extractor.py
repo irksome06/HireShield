@@ -140,9 +140,8 @@ async def extract_entities(message: str, url: Optional[str] = None) -> Extracted
 
     gemini_key = os.getenv("GEMINI_API_KEY")
     if gemini_key and gemini_key.strip():
-        try:
-            import httpx
-            prompt = f"""
+        import httpx
+        prompt = f"""
 You are a cybersecurity and recruitment intelligence assistant.
 Extract structured entities from the following job communication or offer text.
 Return ONLY valid JSON matching this exact structure:
@@ -161,51 +160,68 @@ Job Offer Text:
 \"\"\"{message}\"\"\"
 Job URL (if provided): {url or 'None'}
 """
-            url_endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={gemini_key.strip()}"
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {
-                    "temperature": 0.1,
-                    "responseMimeType": "application/json"
+        models_to_try = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-flash"]
+        for model_name in models_to_try:
+            try:
+                url_endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key.strip()}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "temperature": 0.1,
+                        "responseMimeType": "application/json"
+                    }
                 }
-            }
 
-            async with httpx.AsyncClient(timeout=8.0) as client:
-                res = await client.post(url_endpoint, json=payload)
-                if res.status_code == 200:
-                    data = res.json()
-                    raw_text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                    if raw_text.startswith("```"):
-                        raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
-                        raw_text = re.sub(r"\s*```$", "", raw_text)
-                    parsed = json.loads(raw_text)
+                async with httpx.AsyncClient(timeout=8.0) as client:
+                    res = await client.post(url_endpoint, json=payload)
+                    if res.status_code == 200:
+                        data = res.json()
+                        candidates = data.get("candidates", [])
+                        if not candidates:
+                            continue
+                        
+                        candidate_content = candidates[0].get("content", {})
+                        raw_text = ""
+                        for part in candidate_content.get("parts", []):
+                            if "text" in part and not part.get("thought", False):
+                                raw_text = part["text"].strip()
+                                break
+                        
+                        if not raw_text and candidate_content.get("parts"):
+                            raw_text = candidate_content["parts"][0].get("text", "").strip()
 
-                    company = parsed.get("company") or base_entities.company
-                    recruiter = parsed.get("recruiter") or base_entities.recruiter
+                        if raw_text.startswith("```"):
+                            raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text)
+                            raw_text = re.sub(r"\s*```$", "", raw_text)
+                        
+                        parsed = json.loads(raw_text)
 
-                    linkedin_company_url = None
-                    if company and company != "Not detected":
-                        linkedin_company_url = f"https://www.linkedin.com/search/results/companies/?keywords={urllib.parse.quote(company)}"
+                        company = parsed.get("company") or base_entities.company
+                        recruiter = parsed.get("recruiter") or base_entities.recruiter
 
-                    linkedin_recruiter_url = None
-                    if recruiter and recruiter != "Not detected":
-                        query = f"{recruiter} {company}" if company and company != "Not detected" else recruiter
-                        linkedin_recruiter_url = f"https://www.linkedin.com/search/results/people/?keywords={urllib.parse.quote(query)}"
+                        linkedin_company_url = None
+                        if company and company != "Not detected":
+                            linkedin_company_url = f"https://www.linkedin.com/search/results/companies/?keywords={urllib.parse.quote(company)}"
 
-                    return ExtractedEntities(
-                        company=company,
-                        recruiter=recruiter,
-                        email=parsed.get("email") or base_entities.email,
-                        phone=parsed.get("phone") or base_entities.phone,
-                        job_title=parsed.get("job_title") or base_entities.job_title,
-                        domain=parsed.get("domain") or base_entities.domain,
-                        payment_amount=parsed.get("payment_amount") or base_entities.payment_amount,
-                        salary_claim=parsed.get("salary_claim") or base_entities.salary_claim,
-                        linkedin_company_url=linkedin_company_url,
-                        linkedin_recruiter_url=linkedin_recruiter_url,
-                        extraction_method="Gemini 1.5 Flash AI"
-                    )
-        except Exception as e:
-            print(f"Gemini LLM extraction fallback (rule engine active): {e}")
+                        linkedin_recruiter_url = None
+                        if recruiter and recruiter != "Not detected":
+                            query = f"{recruiter} {company}" if company and company != "Not detected" else recruiter
+                            linkedin_recruiter_url = f"https://www.linkedin.com/search/results/people/?keywords={urllib.parse.quote(query)}"
+
+                        return ExtractedEntities(
+                            company=company,
+                            recruiter=recruiter,
+                            email=parsed.get("email") or base_entities.email,
+                            phone=parsed.get("phone") or base_entities.phone,
+                            job_title=parsed.get("job_title") or base_entities.job_title,
+                            domain=parsed.get("domain") or base_entities.domain,
+                            payment_amount=parsed.get("payment_amount") or base_entities.payment_amount,
+                            salary_claim=parsed.get("salary_claim") or base_entities.salary_claim,
+                            linkedin_company_url=linkedin_company_url,
+                            linkedin_recruiter_url=linkedin_recruiter_url,
+                            extraction_method="Gemini AI (Structured Schema)"
+                        )
+            except Exception as e:
+                print(f"Gemini model {model_name} extraction fallback: {e}")
 
     return base_entities

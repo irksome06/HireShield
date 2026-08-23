@@ -37,9 +37,10 @@ class ThreatIntelligenceService:
             clean_url = "https://" + clean_url
 
         # 1. If Google Safe Browsing API key is configured, query official endpoint
-        if GOOGLE_SAFE_BROWSING_KEY:
+        api_key = os.getenv("GOOGLE_SAFE_BROWSING_KEY", "").strip() or GOOGLE_SAFE_BROWSING_KEY
+        if api_key:
             try:
-                api_url = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={GOOGLE_SAFE_BROWSING_KEY}"
+                api_url = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={api_key}"
                 payload = {
                     "client": {
                         "clientId": "hireshield-threat-engine",

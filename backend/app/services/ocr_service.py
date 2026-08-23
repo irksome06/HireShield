@@ -86,32 +86,45 @@ def extract_text_from_base64_image(image_base64: str) -> str:
     # 2. Try Gemini Multimodal Vision API fallback if key configured
     gemini_key = os.getenv("GEMINI_API_KEY")
     if gemini_key and gemini_key.strip():
-        try:
-            import requests
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key.strip()}"
-            payload = {
-                "contents": [
-                    {
-                        "parts": [
-                            {"text": "Transcribe all visible text from this job offer or email screenshot accurately. Return ONLY the extracted text with no extra commentary."},
-                            {
-                                "inline_data": {
-                                    "mime_type": mime_type,
-                                    "data": raw_base64
+        import requests
+        models_to_try = ["gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-flash-image"]
+        for model_name in models_to_try:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key.strip()}"
+                payload = {
+                    "contents": [
+                        {
+                            "parts": [
+                                {"text": "Transcribe all visible text from this job offer or email screenshot accurately. Return ONLY the extracted text with no extra commentary."},
+                                {
+                                    "inline_data": {
+                                        "mime_type": mime_type,
+                                        "data": raw_base64
+                                    }
                                 }
-                            }
-                        ]
-                    }
-                ]
-            }
-            res = requests.post(url, json=payload, timeout=8.0)
-            if res.status_code == 200:
-                data = res.json()
-                text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-                if text:
-                    logger.info(f"Gemini Vision OCR extracted {len(text)} chars from screenshot.")
-                    return text
-        except Exception as gemini_err:
-            logger.error(f"Gemini Vision OCR fallback error: {gemini_err}")
+                            ]
+                        }
+                    ]
+                }
+                res = requests.post(url, json=payload, timeout=8.0)
+                if res.status_code == 200:
+                    data = res.json()
+                    candidates = data.get("candidates", [])
+                    if not candidates:
+                        continue
+                    candidate_content = candidates[0].get("content", {})
+                    extracted_text = ""
+                    for part in candidate_content.get("parts", []):
+                        if "text" in part and not part.get("thought", False):
+                            extracted_text = part["text"].strip()
+                            break
+                    if not extracted_text and candidate_content.get("parts"):
+                        extracted_text = candidate_content["parts"][0].get("text", "").strip()
+
+                    if extracted_text:
+                        logger.info(f"Gemini Vision OCR extracted {len(extracted_text)} chars from screenshot.")
+                        return extracted_text
+            except Exception as gemini_err:
+                logger.warning(f"Gemini Vision model {model_name} error: {gemini_err}")
 
     return ""

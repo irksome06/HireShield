@@ -112,6 +112,34 @@ def evaluate_job_risk(
         ))
         deduction_id += 1
 
+    # 7. GOOGLE SAFE BROWSING & PHISHING TELEMETRY FLAG (Critical risk: -35)
+    safe_browsing_verif = next((v for v in verifications if v.name in ("Google Safe Browsing Telemetry", "Threat Telemetry & Phishing Scan", "Malware & Phishing Telemetry")), None)
+    if safe_browsing_verif and safe_browsing_verif.status == "Failed":
+        penalty = -35
+        score += penalty
+        deductions.append(DeductionItem(
+            id=deduction_id,
+            signal="Google Safe Browsing Threat Blacklist",
+            penalty=penalty,
+            severity="Critical",
+            description=f"Destination URL flagged in global threat intelligence: {safe_browsing_verif.detail}"
+        ))
+        deduction_id += 1
+
+    # 8. WHOIS NEWLY REGISTERED DISPOSABLE DOMAIN (Medium risk: -20)
+    whois_verif = next((v for v in verifications if v.name == "Domain WHOIS Intelligence"), None)
+    if whois_verif and whois_verif.status == "Failed":
+        penalty = -20
+        score += penalty
+        deductions.append(DeductionItem(
+            id=deduction_id,
+            signal="Newly Registered Disposable Domain",
+            penalty=penalty,
+            severity="Medium",
+            description=f"Domain registered within the last 30 days ({whois_verif.detail}). High statistical correlation with recruitment fraud."
+        ))
+        deduction_id += 1
+
     # Clamp Trust Score to 0..100
     final_score = max(0, min(100, score))
 
