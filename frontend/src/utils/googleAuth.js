@@ -4,11 +4,18 @@
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '1033247490719-vonvno1oald8unlmkr701ev73mldjere.apps.googleusercontent.com';
 
+let tokenClientInstance = null;
+
 /**
- * Ensures Google Identity Services script is loaded in the DOM.
+ * Ensures Google Identity Services script is preloaded immediately.
  */
 export function loadGoogleScript() {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') {
+      resolve(null);
+      return;
+    }
+
     if (window.google?.accounts) {
       resolve(window.google);
       return;
@@ -17,8 +24,7 @@ export function loadGoogleScript() {
     const existing = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
     if (existing) {
       existing.addEventListener('load', () => resolve(window.google));
-      existing.addEventListener('error', () => reject(new Error('Google Identity Services script failed to load. Please check adblockers.')));
-      // Check if already loaded
+      existing.addEventListener('error', () => resolve(null));
       if (window.google?.accounts) {
         resolve(window.google);
         return;
@@ -30,62 +36,83 @@ export function loadGoogleScript() {
     script.async = true;
     script.defer = true;
     script.onload = () => resolve(window.google);
-    script.onerror = () => reject(new Error('Unable to connect to accounts.google.com. Please check your network or disable Brave Shields / AdBlockers.'));
+    script.onerror = () => resolve(null);
     document.head.appendChild(script);
   });
 }
 
+// Preload script immediately when module is imported
+if (typeof window !== 'undefined') {
+  loadGoogleScript();
+}
+
 /**
- * Triggers Google OAuth 2.0 interactive authorization popup
+ * Triggers Google OAuth 2.0 interactive popup instantly on user click
  */
-export async function triggerGoogleOAuth({ onToken, onError, onStart }) {
+export function triggerGoogleOAuth({ onToken, onError, onStart }) {
   if (onStart) onStart();
 
-  try {
-    await loadGoogleScript();
-  } catch (err) {
-    if (onError) onError(err.message || 'Google Identity SDK could not be loaded.');
-    return;
-  }
-
-  if (!window.google?.accounts?.oauth2) {
-    if (onError) onError('Google OAuth2 SDK is not ready. Please try again.');
-    return;
-  }
-
-  try {
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_CLIENT_ID,
-      scope: 'email profile openid',
-      callback: async (response) => {
-        if (response && response.access_token) {
-          if (onToken) onToken(response.access_token);
-        } else if (response && response.error) {
-          let msg = response.error_description || response.error;
-          if (response.error === 'access_denied') {
-            msg = 'Google Sign-In was cancelled or access was denied.';
-          } else if (response.error === 'origin_mismatch') {
-            msg = 'Google OAuth Error: Origin mismatch. Please add your current domain to Authorized JavaScript Origins in Google Cloud Console.';
+  if (window.google?.accounts?.oauth2) {
+    try {
+      const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'email profile openid',
+        callback: async (response) => {
+          if (response && response.access_token) {
+            if (onToken) onToken(response.access_token);
+          } else if (response && response.error) {
+            let msg = response.error_description || response.error;
+            if (response.error === 'access_denied') {
+              msg = 'Google Sign-In was cancelled or access was denied.';
+            } else if (response.error === 'origin_mismatch') {
+              msg = 'Origin mismatch: Please add your domain to Authorized JavaScript Origins in Google Cloud Console.';
+            }
+            if (onError) onError(msg);
+          }
+        },
+        error_callback: (nonOAuthErr) => {
+          let msg = 'Google Sign-In window closed or blocked.';
+          if (nonOAuthErr?.type === 'popup_failed_to_open') {
+            msg = 'Popup was blocked by your browser. Please allow popups for this site.';
+          } else if (nonOAuthErr?.message) {
+            msg = nonOAuthErr.message;
           }
           if (onError) onError(msg);
         }
-      },
-      error_callback: (nonOAuthErr) => {
-        let msg = 'Google Sign-In popup was closed or blocked by browser.';
-        if (nonOAuthErr?.type === 'popup_failed_to_open') {
-          msg = 'Google popup was blocked by your browser. Please allow popups for this site.';
-        } else if (nonOAuthErr?.message) {
-          msg = nonOAuthErr.message;
-        }
-        if (onError) onError(msg);
-      }
-    });
+      });
 
-    client.requestAccessToken({ prompt: 'select_account' });
-  } catch (err) {
-    console.error('OAuth launch error:', err);
-    if (onError) onError(err.message || 'Failed to open Google Sign-In.');
+      // Synchronously request access token to guarantee popup opens immediately
+      client.requestAccessToken({ prompt: 'select_account' });
+      return;
+    } catch (err) {
+      console.warn('OAuth launch notice:', err);
+    }
   }
+
+  // If not yet loaded, load and then trigger
+  loadGoogleScript().then(() => {
+    if (window.google?.accounts?.oauth2) {
+      try {
+        const client = window.google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: 'email profile openid',
+          callback: async (response) => {
+            if (response && response.access_token) {
+              if (onToken) onToken(response.access_token);
+            }
+          },
+          error_callback: (err) => {
+            if (onError) onError(err?.message || 'Google popup closed.');
+          }
+        });
+        client.requestAccessToken({ prompt: 'select_account' });
+      } catch (e) {
+        if (onError) onError('Could not launch Google Sign-In.');
+      }
+    } else {
+      if (onError) onError('Google Identity Services is loading. Please try again.');
+    }
+  });
 }
 
 /**
@@ -94,12 +121,7 @@ export async function triggerGoogleOAuth({ onToken, onError, onStart }) {
 export async function renderOfficialGoogleButton(containerElement, { onCredential, authMode = 'signin' }) {
   if (!containerElement) return;
 
-  try {
-    await loadGoogleScript();
-  } catch (err) {
-    console.warn('Official button script load warning:', err);
-    return;
-  }
+  await loadGoogleScript();
 
   if (!window.google?.accounts?.id) return;
 
@@ -123,7 +145,7 @@ export async function renderOfficialGoogleButton(containerElement, { onCredentia
       text: authMode === 'signup' ? 'signup_with' : 'signin_with'
     });
   } catch (err) {
-    console.warn('Failed to render official Google button:', err);
+    console.warn('Official Google button render notice:', err);
   }
 }
 
