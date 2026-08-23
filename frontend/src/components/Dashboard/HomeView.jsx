@@ -45,11 +45,6 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
   // Selected Flashcard for Detailed Modal
   const [selectedCard, setSelectedCard] = useState(null);
 
-  // Carousel Active Index, Autoplay & Continuous Progress
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(true);
-  const [slideProgress, setSlideProgress] = useState(0);
-  const touchStartX = useRef(null);
 
   // Complete Flashcards Dataset with Authentic Real-World Photography & Live Data
   const FLASHCARDS_DATA = [
@@ -187,41 +182,32 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
     return card.type === activeCategory;
   });
 
-  // Automated Self-Swiping Engine with Real-Time Progress Bar
-  const DURATION_PER_SLIDE = 4000; // 4 seconds per card
-  const INTERVAL_STEP = 50; // Progress tick
+  // Carousel Active Index & Autoplay
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(true);
+  const touchStartX = useRef(null);
 
+  // Automated Smooth Self-Swiping Engine (4s interval)
   useEffect(() => {
     if (!isAutoPlayEnabled || filteredCards.length <= 1) return;
 
-    setSlideProgress(0);
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % filteredCards.length);
+    }, 4000);
 
-    const progressTimer = setInterval(() => {
-      setSlideProgress((prev) => {
-        if (prev >= 100) {
-          setCurrentIndex((curr) => (curr + 1) % filteredCards.length);
-          return 0;
-        }
-        return prev + (INTERVAL_STEP / DURATION_PER_SLIDE) * 100;
-      });
-    }, INTERVAL_STEP);
-
-    return () => clearInterval(progressTimer);
-  }, [currentIndex, isAutoPlayEnabled, filteredCards.length]);
+    return () => clearInterval(timer);
+  }, [isAutoPlayEnabled, filteredCards.length]);
 
   // Reset current index when category changes
   useEffect(() => {
     setCurrentIndex(0);
-    setSlideProgress(0);
   }, [activeCategory]);
 
   const handleNext = () => {
-    setSlideProgress(0);
     setCurrentIndex((prev) => (prev + 1) % filteredCards.length);
   };
 
   const handlePrev = () => {
-    setSlideProgress(0);
     setCurrentIndex((prev) => (prev - 1 + filteredCards.length) % filteredCards.length);
   };
 
@@ -370,22 +356,12 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
 
         {/* The Swipeable / Auto-Swiping Flashcard Deck */}
         <div 
-          className="relative rounded-3xl bg-slate-900/90 border border-slate-800 p-4 sm:p-6 backdrop-blur-2xl shadow-xl overflow-hidden group"
+          className="relative rounded-3xl bg-slate-900/90 border border-slate-800 p-4 sm:p-6 backdrop-blur-2xl shadow-xl overflow-hidden group transition-all duration-500"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Continuous Auto-Swipe Progress Bar Line at Top */}
-          {isAutoPlayEnabled && (
-            <div className="absolute top-0 left-0 right-0 h-1 bg-slate-950">
-              <div 
-                className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 transition-all duration-75"
-                style={{ width: `${slideProgress}%` }}
-              />
-            </div>
-          )}
-
           {filteredCards.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            <div key={filteredCards[currentIndex]?.id} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center animate-in fade-in duration-500">
               
               {/* Left Column: Authentic Real Photography Image */}
               <div className="lg:col-span-5 relative rounded-2xl overflow-hidden aspect-video lg:aspect-[4/3] bg-slate-950 border border-slate-800 shadow-lg group-hover:border-cyan-500/40 transition-colors">
