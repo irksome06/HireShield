@@ -1,0 +1,48 @@
+{
+  "test_suites": [
+    {
+      "id": "TC-01",
+      "name": "Advance Fee Hardware Equipment Check Scam",
+      "expected_risk_level": "High",
+      "expected_trust_score_range": [0, 25],
+      "payload": {
+        "message": "Dear Candidate, Congratulations! Following a review of your application, you have been selected for the Remote Software QA position at Stripe Technologies. Your starting compensation is $48/hour. To set up your home office hardware (Apple MacBook Pro M3, monitor, and VPN router), our finance department has mailed you a certified equipment check of $3,450. Please deposit the check immediately and wire $450 back via Zelle to our authorized supplier hardware dispatch handle: hardware-procurement@stripe-dispatch.top to initiate shipment today.",
+        "url": "https://stripe-dispatch.top",
+        "has_image": false
+      },
+      "expected_signals": [
+        "Upfront Payment / Equipment Fee Demand",
+        "High-Risk Domain TLD & Spoofing Indicator",
+        "Recruiter Email Domain Mismatch"
+      ]
+    },
+    {
+      "id": "TC-02",
+      "name": "Telegram Task Scam & Sensitive SSN Harvesting",
+      "expected_risk_level": "High",
+      "expected_trust_score_range": [10, 35],
+      "payload": {
+        "message": "Hello, Your profile was shortlisted for an immediate part-time Data Tagging Specialist role. Compensation is $350/day. No prior experience is required, and selection is guaranteed for the first 10 applicants. To confirm your contract today, please send your Full Name, SSN, Bank Account Routing Number, and contact our hiring manager on Telegram at @sarah_recruitment_apex.",
+        "url": "",
+        "has_image": false
+      },
+      "expected_signals": [
+        "Urgent Sensitive Data / OTP Harvesting",
+        "Off-Platform Unindexed Communication",
+        "Artificial Scarcity / Guaranteed Employment"
+      ]
+    },
+    {
+      "id": "TC-03",
+      "name": "Legitimate Enterprise Offer Letter",
+      "expected_risk_level": "Low",
+      "expected_trust_score_range": [90, 100],
+      "payload": {
+        "message": "Hi, We are pleased to extend an offer for the Staff Software Architect position at Stripe, Inc. Your annual base salary will be $210,000 with standard equity and medical benefits. Your onboarding coordinator, David Miller, can be reached directly at david.miller@stripe.com. Please review your formal offer packet through our official corporate portal at https://stripe.com/jobs/onboarding before your start date.",
+        "url": "https://stripe.com",
+        "has_image": false
+      },
+      "expected_signals": []
+    }
+  ]
+}
