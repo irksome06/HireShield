@@ -318,46 +318,11 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
       {/* ------------------------------------------------------------- */}
       {/* 2. DYNAMIC AUTO-SWIPING FLASHCARDS SHOWCASE (REAL PHOTOS)     */}
       {/* ------------------------------------------------------------- */}
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         
-        {/* Flashcards Header & Category Filter Tabs */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 text-xs font-bold text-white">
-              <Sparkles className="w-4 h-4 text-cyan-400" />
-              <span className="text-base font-extrabold tracking-tight">Recruitment Flashcards & Live Drives</span>
-            </div>
-            <p className="text-xs text-slate-400">
-              Verified 2026 application deadlines, threat warnings, and safety briefs. (Automated Live Deck)
-            </p>
-          </div>
-
-          {/* Autoplay Toggle & Category Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
-            
-            {/* Auto-Slide Status Indicator */}
-            <button
-              onClick={() => setIsAutoPlayEnabled(!isAutoPlayEnabled)}
-              className={`py-1.5 px-2.5 rounded-xl text-[11px] font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
-                isAutoPlayEnabled
-                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40 shadow-sm'
-                  : 'bg-slate-900/80 text-slate-400 border-slate-800'
-              }`}
-              title={isAutoPlayEnabled ? 'Auto-swipe is ACTIVE (4s interval)' : 'Auto-swipe is PAUSED'}
-            >
-              {isAutoPlayEnabled ? (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  <span>Auto-Swipe ON</span>
-                </>
-              ) : (
-                <>
-                  <Pause className="w-3 h-3 text-slate-400" />
-                  <span>Paused</span>
-                </>
-              )}
-            </button>
-
+        {/* Sleek Category Filter Tabs & Autoplay Toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pb-0.5">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full">
             {[
               { id: 'all', label: '🔥 All Cards' },
               { id: 'jobs', label: '🎓 2026 Internships' },
@@ -370,7 +335,7 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
                 onClick={() => setActiveCategory(cat.id)}
                 className={`py-1.5 px-3 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   activeCategory === cat.id
-                    ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/20'
                     : 'bg-slate-900/90 text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700'
                 }`}
               >
@@ -378,6 +343,29 @@ export default function HomeView({ onOpenScanner, onViewPassport, onViewHistory,
               </button>
             ))}
           </div>
+
+          {/* Auto-Slide Status Indicator */}
+          <button
+            onClick={() => setIsAutoPlayEnabled(!isAutoPlayEnabled)}
+            className={`py-1.5 px-3 rounded-xl text-[11px] font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+              isAutoPlayEnabled
+                ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40 shadow-sm'
+                : 'bg-slate-900/80 text-slate-400 border-slate-800 hover:text-slate-200'
+            }`}
+            title={isAutoPlayEnabled ? 'Auto-swipe is ACTIVE (4s interval)' : 'Auto-swipe is PAUSED'}
+          >
+            {isAutoPlayEnabled ? (
+              <>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span>Auto-Swipe ON</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-3 h-3 text-slate-400" />
+                <span>Auto-Swipe OFF</span>
+              </>
+            )}
+          </button>
         </div>
 
         {/* The Swipeable / Auto-Swiping Flashcard Deck */}
