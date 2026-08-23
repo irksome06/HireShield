@@ -120,7 +120,30 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
   };
 
   const handleGoogleButtonClick = () => {
-    let gsiTriggered = false;
+    // 1. Try Google OAuth2 Interactive Popup Client
+    if (googleClientId && window.google?.accounts?.oauth2) {
+      try {
+        const client = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'email profile openid',
+          callback: async (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              await loginWithGoogle(tokenResponse.access_token);
+            }
+          },
+          error_callback: (err) => {
+            console.warn('Google OAuth popup notice:', err);
+            setShowGooglePicker(true);
+          }
+        });
+        client.requestAccessToken({ prompt: 'select_account' });
+        return;
+      } catch (err) {
+        console.warn('OAuth2 TokenClient init error:', err);
+      }
+    }
+
+    // 2. Try Google Identity Services One-Tap
     if (googleClientId && window.google?.accounts?.id) {
       try {
         window.google.accounts.id.prompt((notification) => {
@@ -128,16 +151,13 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
             setShowGooglePicker(true);
           }
         });
-        gsiTriggered = true;
       } catch (e) {
         console.warn('Google One-Tap notice:', e);
       }
     }
     
-    // If not using GSI or GSI failed to prompt immediately, show the picker modal
-    setTimeout(() => {
-      setShowGooglePicker(true);
-    }, gsiTriggered ? 300 : 0);
+    // 3. Fallback: Show Google Account Picker Modal
+    setShowGooglePicker(true);
   };
 
   const triggerGoogleLogin = async (name, email, picture) => {
@@ -380,8 +400,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signin' }) {
 
       {/* Google Picker Sub-Modal */}
       {showGooglePicker && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="w-full max-w-sm rounded-3xl bg-[#0f172a] border border-slate-700 p-5 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="w-full max-w-sm rounded-3xl bg-[#0f172a] border border-slate-700 p-6 shadow-2xl space-y-4 cyber-glow">
             
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

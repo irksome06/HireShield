@@ -130,6 +130,27 @@ def verify_google_token(credential: str) -> Optional[Dict[str, Any]]:
     except Exception as jwt_err:
         print(f"JWT payload fallback note: {jwt_err}")
 
+    # Method 4: Google OAuth2 Access Token lookup (ya29.xxx)
+    if credential.startswith("ya29."):
+        try:
+            import requests
+            res = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {credential}"},
+                timeout=5.0
+            )
+            if res.status_code == 200:
+                data = res.json()
+                if "email" in data:
+                    return {
+                        "email": data.get("email"),
+                        "name": data.get("name", data.get("email", "").split("@")[0]),
+                        "picture": data.get("picture"),
+                        "sub": data.get("sub", data.get("email"))
+                    }
+        except Exception as access_err:
+            print(f"Google access_token lookup error: {access_err}")
+
     return None
 
 def get_current_user(

@@ -115,7 +115,30 @@ export default function AuthLandingPage() {
   };
 
   const handleGoogleButtonClick = () => {
-    let gsiTriggered = false;
+    // 1. Try Google OAuth2 Interactive Popup Client
+    if (googleClientId && window.google?.accounts?.oauth2) {
+      try {
+        const client = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'email profile openid',
+          callback: async (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              await loginWithGoogle(tokenResponse.access_token);
+            }
+          },
+          error_callback: (err) => {
+            console.warn('Google OAuth popup notice:', err);
+            setShowGoogleModal(true);
+          }
+        });
+        client.requestAccessToken({ prompt: 'select_account' });
+        return;
+      } catch (err) {
+        console.warn('OAuth2 TokenClient init error:', err);
+      }
+    }
+
+    // 2. Try Google Identity Services One-Tap
     if (googleClientId && window.google?.accounts?.id) {
       try {
         window.google.accounts.id.prompt((notification) => {
@@ -123,16 +146,13 @@ export default function AuthLandingPage() {
             setShowGoogleModal(true);
           }
         });
-        gsiTriggered = true;
       } catch (e) {
         console.warn('Google One-Tap notice:', e);
       }
     }
     
-    // Fallback to picker modal
-    setTimeout(() => {
-      setShowGoogleModal(true);
-    }, gsiTriggered ? 300 : 0);
+    // 3. Fallback: Show Google Account Picker Modal
+    setShowGoogleModal(true);
   };
 
   const triggerGoogleLogin = async (name, email, picture) => {
@@ -433,8 +453,8 @@ export default function AuthLandingPage() {
 
       {/* Interactive Google Account Picker Modal */}
       {showGoogleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-3xl bg-[#0f172a] border border-slate-700/80 p-6 shadow-2xl shadow-cyan-950/50 space-y-5 animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl bg-[#0f172a] border border-slate-700/80 p-6 shadow-2xl shadow-cyan-950/50 space-y-5 animate-in zoom-in-95 duration-150 cyber-glow">
             
             {/* Header */}
             <div className="flex items-center justify-between">

@@ -101,6 +101,28 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
     }
   };
 
+  const handleGoogleClick = () => {
+    if (googleClientId && window.google?.accounts?.oauth2) {
+      try {
+        const client = window.google.accounts.oauth2.initTokenClient({
+          client_id: googleClientId,
+          scope: 'email profile openid',
+          callback: async (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              await loginWithGoogle(tokenResponse.access_token);
+            }
+          },
+          error_callback: () => triggerGoogleDemo()
+        });
+        client.requestAccessToken({ prompt: 'select_account' });
+        return;
+      } catch (err) {
+        console.warn('OAuth2 TokenClient notice:', err);
+      }
+    }
+    triggerGoogleDemo();
+  };
+
   const triggerGoogleDemo = async () => {
     const payload = JSON.stringify({
       name: "Alex Mercer",
@@ -178,7 +200,7 @@ export default function Scene5AccessGateway({ onScrollPrev, onScrollTop }) {
             
             <button
               type="button"
-              onClick={triggerGoogleDemo}
+              onClick={handleGoogleClick}
               className="w-full py-2.5 px-4 rounded-xl bg-slate-950/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-200 flex items-center justify-center gap-2.5 transition-all hover:border-cyan-500/50 cursor-pointer group"
             >
               <svg className="w-4 h-4 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
