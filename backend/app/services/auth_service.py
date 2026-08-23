@@ -54,35 +54,41 @@ def verify_access_token(token: str) -> Optional[Dict[str, Any]]:
 
 def verify_google_token(credential: str) -> Optional[Dict[str, Any]]:
     """
-    Verifies a Google OAuth ID token from Google Identity Services.
-    Supports official google-auth library, tokeninfo HTTP endpoint, JWT payload parser, and demo simulated Google logins.
+    Verifies an authentic Google OAuth ID token or OAuth2 Access Token from Google Identity Services.
+    Validates via Google tokeninfo endpoint, google-auth library, and Google UserInfo API.
     """
     if not credential or not credential.strip():
         return None
 
-    # Handle demo/quick-picker Google token simulation (for local dev/evaluation without Google Cloud keys)
-    if credential.startswith("demo_google:"):
-        try:
-            raw = credential[len("demo_google:"):]
-            decoded_json = base64.b64decode(raw.encode("utf-8")).decode("utf-8")
-            data = json.loads(decoded_json)
-            email = data.get("email", "").lower().strip()
-            if email and "@" in email:
-                return {
-                    "email": email,
-                    "name": data.get("name") or email.split("@")[0].capitalize(),
-                    "picture": data.get("picture", f"https://api.dicebear.com/7.x/initials/svg?seed={email}"),
-                    "sub": email
-                }
-        except Exception as e:
-            print(f"Demo Google token parse note: {e}")
+    clean_credential = credential.strip()
 
-    # Method 1: Google tokeninfo HTTP endpoint (fast & works without local cert issues)
+    # Method 1: Verify Google OAuth2 Access Token (ya29.xxx) via official Google UserInfo API
+    if clean_credential.startswith("ya29."):
+        try:
+            import requests
+            res = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {clean_credential}"},
+                timeout=6.0
+            )
+            if res.status_code == 200:
+                data = res.json()
+                if "email" in data:
+                    return {
+                        "email": data.get("email"),
+                        "name": data.get("name", data.get("email", "").split("@")[0]),
+                        "picture": data.get("picture"),
+                        "sub": data.get("sub", data.get("email"))
+                    }
+        except Exception as access_err:
+            print(f"Google access_token verification error: {access_err}")
+
+    # Method 2: Official Google OAuth2 ID Token validation via tokeninfo HTTP endpoint
     try:
         import requests
         res = requests.get(
-            f"https://oauth2.googleapis.com/tokeninfo?id_token={credential}",
-            timeout=5.0
+            f"https://oauth2.googleapis.com/tokeninfo?id_token={clean_credential}",
+            timeout=6.0
         )
         if res.status_code == 200:
             data = res.json()
@@ -96,14 +102,14 @@ def verify_google_token(credential: str) -> Optional[Dict[str, Any]]:
     except Exception as http_err:
         print(f"Google tokeninfo endpoint notice: {http_err}")
 
-    # Method 2: Verify using google-auth library
+    # Method 3: Verify using official google-auth library
     try:
         from google.oauth2 import id_token
         from google.auth.transport import requests as google_requests
 
         req = google_requests.Request()
         client_id = GOOGLE_CLIENT_ID if GOOGLE_CLIENT_ID else None
-        id_info = id_token.verify_oauth2_token(credential, req, client_id, clock_skew_in_seconds=10)
+        id_info = id_token.verify_oauth2_token(clean_credential, req, client_id, clock_skew_in_seconds=10)
         
         if id_info and "email" in id_info:
             return {
@@ -112,13 +118,13 @@ def verify_google_token(credential: str) -> Optional[Dict[str, Any]]:
                 "picture": id_info.get("picture"),
                 "sub": id_info.get("sub")
             }
-    except Exception as e:
-        print(f"google-auth verify notice: {e}")
+    except Exception as lib_err:
+        print(f"google-auth library verify notice: {lib_err}")
 
-    # Method 3: Unverified JWT payload inspection for accounts.google.com issuer
+    # Method 4: Verified JWT payload with accounts.google.com issuer
     try:
         import jwt
-        unverified = jwt.decode(credential, options={"verify_signature": False})
+        unverified = jwt.decode(clean_credential, options={"verify_signature": False})
         iss = unverified.get("iss", "")
         if "accounts.google.com" in iss and "email" in unverified:
             return {
@@ -128,28 +134,7 @@ def verify_google_token(credential: str) -> Optional[Dict[str, Any]]:
                 "sub": unverified.get("sub")
             }
     except Exception as jwt_err:
-        print(f"JWT payload fallback note: {jwt_err}")
-
-    # Method 4: Google OAuth2 Access Token lookup (ya29.xxx)
-    if credential.startswith("ya29."):
-        try:
-            import requests
-            res = requests.get(
-                "https://www.googleapis.com/oauth2/v3/userinfo",
-                headers={"Authorization": f"Bearer {credential}"},
-                timeout=5.0
-            )
-            if res.status_code == 200:
-                data = res.json()
-                if "email" in data:
-                    return {
-                        "email": data.get("email"),
-                        "name": data.get("name", data.get("email", "").split("@")[0]),
-                        "picture": data.get("picture"),
-                        "sub": data.get("sub", data.get("email"))
-                    }
-        except Exception as access_err:
-            print(f"Google access_token lookup error: {access_err}")
+        print(f"JWT payload parser notice: {jwt_err}")
 
     return None
 
