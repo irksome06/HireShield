@@ -71,7 +71,7 @@ export default function ScrollLandingPage() {
   };
 
   const sceneTooltips = [
-    '01 • Cyber Station',
+    '01 • Cyber Defense',
     '02 • Requisition Sandbox',
     '03 • Threat Engine',
     '04 • Job Trust Passport',

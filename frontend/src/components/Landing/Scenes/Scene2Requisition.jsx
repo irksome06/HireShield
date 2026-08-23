@@ -167,7 +167,7 @@ export default function Scene2Requisition({ onOpenAuth, onScrollNext, onScrollPr
           onClick={onScrollPrev}
           className="text-slate-400 hover:text-white transition-colors cursor-pointer"
         >
-          ← Back to Station
+          ← Back to Overview
         </button>
 
         <button

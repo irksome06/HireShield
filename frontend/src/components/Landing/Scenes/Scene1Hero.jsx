@@ -42,26 +42,8 @@ export default function Scene1Hero({ onOpenAuth, onScrollNext }) {
           </p>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-          <button
-            onClick={() => onOpenAuth('signup')}
-            className="py-3.5 px-7 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-cyan-500/25 flex items-center gap-2.5 transition-all transform active:scale-95 cursor-pointer"
-          >
-            <span>Get Protected Free</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => onOpenAuth('signin')}
-            className="py-3.5 px-6 rounded-2xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-xs sm:text-sm font-semibold backdrop-blur-md transition-all cursor-pointer flex items-center gap-2"
-          >
-            <span>Sign In with Google</span>
-          </button>
-        </div>
-
         {/* Trust Badges Bar */}
-        <div className="flex flex-wrap items-center justify-center gap-6 pt-4 text-xs font-mono text-slate-400">
+        <div className="flex flex-wrap items-center justify-center gap-6 pt-2 text-xs font-mono text-slate-400">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span>140+ Threat Rules</span>
@@ -82,7 +64,7 @@ export default function Scene1Hero({ onOpenAuth, onScrollNext }) {
       <div className="max-w-5xl mx-auto w-full flex items-center justify-between text-xs text-slate-500 font-mono z-10 pt-6 border-t border-slate-900">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>CYBER STATION: ONLINE</span>
+          <span>CYBER DEFENSE: ONLINE</span>
         </div>
 
         <button
