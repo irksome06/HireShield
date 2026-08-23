@@ -107,7 +107,7 @@ export default function ScrollLandingPage() {
       {/* 3D INTERACTIVE CYBER LAPTOP BACKDROP RIG            */}
       {/* ---------------------------------------------------- */}
       <div 
-        className={`fixed inset-0 pointer-events-none z-10 flex items-center justify-center pt-28 sm:pt-36 md:pt-40 lg:pt-44 pb-10 sm:pb-12 overflow-hidden transition-all duration-700 ${
+        className={`fixed inset-x-0 top-[28vh] sm:top-[26vh] md:top-[24vh] bottom-14 sm:bottom-16 md:bottom-20 pointer-events-none z-10 flex items-center justify-center overflow-hidden transition-all duration-700 ${
           activeScene === 4 || scrollProgress >= 0.78
             ? 'opacity-0 scale-90 pointer-events-none'
             : 'opacity-90 scale-100'

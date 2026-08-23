@@ -14,14 +14,14 @@ import {
 
 export default function Scene4Passport({ onOpenAuth, onScrollNext, onScrollPrev }) {
   return (
-    <div className="relative w-full min-h-screen flex flex-col justify-between p-6 sm:p-10 pt-28 pb-12 overflow-hidden select-none bg-[#071318]">
+    <div className="relative w-full min-h-screen flex flex-col justify-between p-6 sm:p-10 pt-16 sm:pt-20 pb-8 sm:pb-10 overflow-hidden select-none bg-[#071318]">
       
       {/* Ambient Emerald/Cyan Security Lighting */}
       <div className="absolute inset-0 bg-grid-pattern opacity-30 pointer-events-none" />
       <div className="absolute top-1/3 right-1/3 w-[550px] h-[550px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
 
       {/* Main Header Area (Unobscured view to 3D Laptop Screen below) */}
-      <div className="max-w-5xl mx-auto w-full space-y-4 z-20 pt-4">
+      <div className="max-w-5xl mx-auto w-full space-y-3 z-20">
         
         {/* Header */}
         <div className="text-center space-y-2 max-w-2xl mx-auto">
